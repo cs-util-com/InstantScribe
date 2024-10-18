@@ -7,10 +7,14 @@
 </head>
 <body>
     <button id="stop">Stop Recording</button>
+    <div id="transcription-container">
+        <h3>Transcription:</h3>
+        <p id="transcription"></p>
+    </div>
 
     <script>
-        if (!window.MediaRecorder) {
-            alert("Your browser does not support audio recording.");
+        if (!window.MediaRecorder || !('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            alert("Your browser does not support the required APIs for audio recording and transcription.");
         } else {
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -30,6 +34,33 @@
                 const stop = document.getElementById('stop');
                 stop.onclick = () => {
                     mediaRecorder.stop();
+                    stop.style.display = 'none';
+                };
+
+                // Automatic Transcription
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = event => {
+                    let transcription = '';
+                    for (let i = 0; i < event.results.length; i++) {
+                        transcription += event.results[i][0].transcript + ' ';
+                    }
+                    document.getElementById('transcription').innerText = transcription;
+                };
+
+                recognition.onerror = event => {
+                    console.error('Speech recognition error:', event.error);
+                };
+
+                recognition.start();
+
+                stop.onclick = () => {
+                    mediaRecorder.stop();
+                    recognition.stop();
                     stop.style.display = 'none';
                 };
             }).catch(error => {
