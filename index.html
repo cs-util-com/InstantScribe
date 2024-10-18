@@ -55,6 +55,7 @@
                 let recognition = new SpeechRecognition();
                 recognition.continuous = true;
                 recognition.interimResults = true;
+                let transcriptionElement = document.getElementById('transcription');
                 
                 // Set default language to browser language
                 const languageSelect = document.getElementById('language-select');
@@ -63,12 +64,14 @@
 
                 // Function to initialize recognition
                 const initializeRecognition = () => {
+                    // Every time the user changes the language keep the old transcription text but add a line break:
+                    var history = transcriptionElement.innerText+"\n";
                     recognition.onresult = event => {
-                        let transcription = '';
+                        let transcription = history;
                         for (let i = 0; i < event.results.length; i++) {
                             transcription += event.results[i][0].transcript + ' ';
                         }
-                        document.getElementById('transcription').innerText = transcription;
+                        transcriptionElement.innerText = transcription;
                     };
                     recognition.onerror = event => {
                         console.error('Speech recognition error:', event.error);
