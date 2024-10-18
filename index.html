@@ -3,10 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Recorder</title>
+    <title>Audio Recorder with Transcription</title>
 </head>
 <body>
     <button id="stop">Stop Recording</button>
+    <label for="language-select">Choose language:</label>
+    <select id="language-select">
+        <option value="en-US">English (US)</option>
+        <option value="en-GB">English (UK)</option>
+        <option value="de-DE">German</option>
+        <option value="fr-FR">French</option>
+        <option value="es-ES">Spanish</option>
+        <option value="it-IT">Italian</option>
+        <option value="ja-JP">Japanese</option>
+        <option value="zh-CN">Chinese (Simplified)</option>
+    </select>
     <div id="transcription-container">
         <h3>Transcription:</h3>
         <p id="transcription"></p>
@@ -17,6 +28,7 @@
             alert("Your browser does not support the required APIs for audio recording and transcription.");
         } else {
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                // Audio Recording
                 const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                 const audioChunks = [];
 
@@ -34,15 +46,40 @@
                 const stop = document.getElementById('stop');
                 stop.onclick = () => {
                     mediaRecorder.stop();
+                    recognition.stop();
                     stop.style.display = 'none';
                 };
 
                 // Automatic Transcription
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                const recognition = new SpeechRecognition();
+                let recognition = new SpeechRecognition();
                 recognition.continuous = true;
                 recognition.interimResults = true;
-                recognition.lang = 'en-US';
+                
+                // Set default language to browser language
+                const languageSelect = document.getElementById('language-select');
+                recognition.lang = navigator.language || 'en-US';
+                languageSelect.value = recognition.lang;
+
+                // Update language when the dropdown value changes
+                languageSelect.addEventListener('change', () => {
+                    recognition.stop();
+                    recognition = new SpeechRecognition();
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.lang = languageSelect.value;
+                    recognition.onresult = event => {
+                        let transcription = '';
+                        for (let i = 0; i < event.results.length; i++) {
+                            transcription += event.results[i][0].transcript + ' ';
+                        }
+                        document.getElementById('transcription').innerText = transcription;
+                    };
+                    recognition.onerror = event => {
+                        console.error('Speech recognition error:', event.error);
+                    };
+                    recognition.start();
+                });
 
                 recognition.onresult = event => {
                     let transcription = '';
