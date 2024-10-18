@@ -65,22 +65,33 @@
                 recognition.continuous = true;
                 recognition.interimResults = true;
                 let transcriptionElement = document.getElementById('transcription');
-                                
+
                 // Set default language to browser language
                 const languageSelect = document.getElementById('language-select');
                 recognition.lang = navigator.language || 'en-US';
                 languageSelect.value = recognition.lang;
 
+                // Variables to track silence
+                let transcriptionText = '';
+                let lastResultTime = Date.now();
+                let lineBreakInserted = false;
+
                 // Function to initialize recognition
                 const initializeRecognition = () => {
-                    // Every time the user changes the language keep the old transcription text but add a line break:
-                    var history = transcriptionElement.innerText + "\n" + "\n";
-                    recognition.onresult = event => {
-                        let transcription = history;
-                        for (let i = 0; i < event.results.length; i++) {
-                            transcription += event.results[i][0].transcript + ' ';
+                    recognition.onresult = function(event) {
+                        lastResultTime = Date.now();
+                        lineBreakInserted = false;
+                        let final_transcript = '';
+                        let interim_transcript = '';
+                        for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) {
+                                final_transcript += event.results[i][0].transcript + ' ';
+                            } else {
+                                interim_transcript += event.results[i][0].transcript + ' ';
+                            }
                         }
-                        transcriptionElement.innerText = transcription;
+                        transcriptionText += final_transcript;
+                        transcriptionElement.innerText = transcriptionText + interim_transcript;
                     };
                     recognition.onerror = event => {
                         console.error('Speech recognition error:', event.error);
@@ -90,6 +101,15 @@
                 // Initialize and start recognition
                 initializeRecognition();
                 recognition.start();
+
+                // Set up interval to check for silence
+                setInterval(() => {
+                    if (Date.now() - lastResultTime > 1000 && !lineBreakInserted) {
+                        transcriptionText += "\n";
+                        transcriptionElement.innerText = transcriptionText;
+                        lineBreakInserted = true;
+                    }
+                }, 500);
 
                 // Update language when the dropdown value changes
                 languageSelect.addEventListener('change', () => {
