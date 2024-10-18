@@ -32,8 +32,11 @@
                 const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                 const audioChunks = [];
 
+                let isRecording = true;
+
                 mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
                 mediaRecorder.onstop = () => {
+                    isRecording = false;
                     const blobUrl = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
                     const a = document.createElement('a');
                     a.href = blobUrl;
@@ -48,6 +51,7 @@
                     mediaRecorder.stop();
                     recognition.stop();
                     stop.style.display = 'none';
+                    isRecording = false;
 
                     { // Also download the transcription as a txt file:
                         const blob = new Blob([transcriptionElement.innerText], { type: 'text/plain' });
@@ -120,7 +124,16 @@
                     recognition.lang = languageSelect.value;
                     initializeRecognition();
                     recognition.start();
-                });                
+                });
+
+                // Warn the user before leaving the page while recording
+                window.addEventListener('beforeunload', (event) => {
+                    if (isRecording) {
+                        event.preventDefault();
+                        event.returnValue = 'A recording is still in progress. Are you sure you want to leave?';
+                    }
+                });
+
             }).catch(error => {
                 console.error(error);
                 alert("Microphone access denied or unavailable.");
