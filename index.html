@@ -22,7 +22,11 @@
             };
 
             mediaRecorder.start();
-            document.getElementById('stop').onclick = () => mediaRecorder.stop();
+            const stop = document.getElementById('stop');
+            stop.onclick = () => {
+                mediaRecorder.stop();
+                stop.style.display = 'none';
+            }
         }).catch(console.error);
     </script>
 </body>
