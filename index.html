@@ -12,47 +12,27 @@
         // HTML Elements
         const stopButton = document.getElementById('stop');
 
-        let mediaRecorder;
         let audioChunks = [];
 
         // Start Recording Immediately
-        window.addEventListener('load', async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
 
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    audioChunks = []; // Clear the audio chunks
-                    saveAudio(audioBlob);
-                };
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const downloadUrl = URL.createObjectURL(audioBlob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = 'recording.webm';
+                a.click();
+                URL.revokeObjectURL(downloadUrl);
+            };
 
-                mediaRecorder.start();
-            } catch (err) {
-                console.error('Error accessing audio devices:', err);
-            }
-        });
-
-        // Stop Recording
-        stopButton.addEventListener('click', () => {
-            mediaRecorder.stop();
-        });
-
-        // Save Audio
-        function saveAudio(audioBlob) {
-            const downloadUrl = URL.createObjectURL(audioBlob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = downloadUrl;
-            a.download = 'recording.webm';
-            document.body.appendChild(a);
-            a.click();
-            URL.revokeObjectURL(downloadUrl);
-        }
+            mediaRecorder.start();
+            stopButton.addEventListener('click', () => mediaRecorder.stop());
+        }).catch(err => console.error('Error accessing audio devices:', err));
     </script>
 </body>
 </html>
