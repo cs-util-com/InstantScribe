@@ -9,25 +9,34 @@
     <button id="stop">Stop Recording</button>
 
     <script>
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            const audioChunks = [];
+        if (!window.MediaRecorder) {
+            alert("Your browser does not support audio recording.");
+        } else {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                const audioChunks = [];
 
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-            mediaRecorder.onstop = () => {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
-                a.download = 'recording.webm';
-                a.click();
-            };
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                mediaRecorder.onstop = () => {
+                    const blobUrl = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
+                    const a = document.createElement('a');
+                    a.href = blobUrl;
+                    a.download = 'recording.webm';
+                    a.click();
+                    URL.revokeObjectURL(blobUrl);
+                };
 
-            mediaRecorder.start();
-            const stop = document.getElementById('stop');
-            stop.onclick = () => {
-                mediaRecorder.stop();
-                stop.style.display = 'none';
-            }
-        }).catch(console.error);
+                mediaRecorder.start();
+                const stop = document.getElementById('stop');
+                stop.onclick = () => {
+                    mediaRecorder.stop();
+                    stop.style.display = 'none';
+                };
+            }).catch(error => {
+                console.error(error);
+                alert("Microphone access denied or unavailable.");
+            });
+        }
     </script>
 </body>
 </html>
