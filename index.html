@@ -9,30 +9,21 @@
     <button id="stop">Stop Recording</button>
 
     <script>
-        // HTML Elements
-        const stopButton = document.getElementById('stop');
-
-        let audioChunks = [];
-
-        // Start Recording Immediately
         navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            const audioChunks = [];
 
             mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-
             mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const downloadUrl = URL.createObjectURL(audioBlob);
                 const a = document.createElement('a');
-                a.href = downloadUrl;
+                a.href = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
                 a.download = 'recording.webm';
                 a.click();
-                URL.revokeObjectURL(downloadUrl);
             };
 
             mediaRecorder.start();
-            stopButton.addEventListener('click', () => mediaRecorder.stop());
-        }).catch(err => console.error('Error accessing audio devices:', err));
+            document.getElementById('stop').onclick = () => mediaRecorder.stop();
+        }).catch(console.error);
     </script>
 </body>
 </html>
