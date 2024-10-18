@@ -36,7 +36,6 @@
 
                 mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
                 mediaRecorder.onstop = () => {
-                    isRecording = false;
                     const blobUrl = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
                     const a = document.createElement('a');
                     a.href = blobUrl;
