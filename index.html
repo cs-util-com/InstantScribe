@@ -48,6 +48,15 @@
                     mediaRecorder.stop();
                     recognition.stop();
                     stop.style.display = 'none';
+
+                    { // Also download the transcription as a txt file:
+                        const blob = new Blob([transcriptionElement.innerText], { type: 'text/plain' });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'transcription.txt';
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                    }
                 };
 
                 // Automatic Transcription
@@ -56,7 +65,7 @@
                 recognition.continuous = true;
                 recognition.interimResults = true;
                 let transcriptionElement = document.getElementById('transcription');
-                
+                                
                 // Set default language to browser language
                 const languageSelect = document.getElementById('language-select');
                 recognition.lang = navigator.language || 'en-US';
@@ -65,7 +74,7 @@
                 // Function to initialize recognition
                 const initializeRecognition = () => {
                     // Every time the user changes the language keep the old transcription text but add a line break:
-                    var history = transcriptionElement.innerText+"\n";
+                    var history = transcriptionElement.innerText + "\n" + "\n";
                     recognition.onresult = event => {
                         let transcription = history;
                         for (let i = 0; i < event.results.length; i++) {
@@ -91,7 +100,7 @@
                     recognition.lang = languageSelect.value;
                     initializeRecognition();
                     recognition.start();
-                });
+                });                
             }).catch(error => {
                 console.error(error);
                 alert("Microphone access denied or unavailable.");
