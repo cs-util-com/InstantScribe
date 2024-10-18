@@ -61,13 +61,8 @@
                 recognition.lang = navigator.language || 'en-US';
                 languageSelect.value = recognition.lang;
 
-                // Update language when the dropdown value changes
-                languageSelect.addEventListener('change', () => {
-                    recognition.stop();
-                    recognition = new SpeechRecognition();
-                    recognition.continuous = true;
-                    recognition.interimResults = true;
-                    recognition.lang = languageSelect.value;
+                // Function to initialize recognition
+                const initializeRecognition = () => {
                     recognition.onresult = event => {
                         let transcription = '';
                         for (let i = 0; i < event.results.length; i++) {
@@ -78,28 +73,22 @@
                     recognition.onerror = event => {
                         console.error('Speech recognition error:', event.error);
                     };
-                    recognition.start();
-                });
-
-                recognition.onresult = event => {
-                    let transcription = '';
-                    for (let i = 0; i < event.results.length; i++) {
-                        transcription += event.results[i][0].transcript + ' ';
-                    }
-                    document.getElementById('transcription').innerText = transcription;
                 };
 
-                recognition.onerror = event => {
-                    console.error('Speech recognition error:', event.error);
-                };
-
+                // Initialize and start recognition
+                initializeRecognition();
                 recognition.start();
 
-                stop.onclick = () => {
-                    mediaRecorder.stop();
+                // Update language when the dropdown value changes
+                languageSelect.addEventListener('change', () => {
                     recognition.stop();
-                    stop.style.display = 'none';
-                };
+                    recognition = new SpeechRecognition();
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    recognition.lang = languageSelect.value;
+                    initializeRecognition();
+                    recognition.start();
+                });
             }).catch(error => {
                 console.error(error);
                 alert("Microphone access denied or unavailable.");
