@@ -29,9 +29,6 @@
             white-space: pre-wrap;
             font-family: monospace;
         }
-        #transcription {
-            outline: none;
-        }
     </style>
 </head>
 <body>
@@ -112,13 +109,19 @@
                     isRecording = false;
 
                     // Remove interim transcript if any
-                    transcriptionElement.innerHTML = transcriptionText;
+                    const interimSpan = document.getElementById('interim-transcript');
+                    if (interimSpan) {
+                        interimSpan.remove();
+                    }
 
                     // Get the transcription content including user edits
-                    const transcriptionToSave = transcriptionElement.textContent || transcriptionElement.innerText;
+                    const transcriptionHTML = transcriptionElement.innerHTML;
+
+                    // Convert HTML to plain text with preserved line breaks
+                    const transcriptionText = htmlToPlainText(transcriptionHTML);
 
                     // Download the transcription as a txt file
-                    const blob = new Blob([transcriptionToSave], { type: 'text/plain;charset=utf-8' });
+                    const blob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
                     a.download = `${getDateTimePrefix()} audio transcript.txt`;
@@ -133,7 +136,7 @@
                 recognition.interimResults = true;
 
                 const transcriptionElement = document.getElementById('transcription');
-                let transcriptionText = ''; // Holds the transcription so far
+                const interimSpanId = 'interim-transcript';
 
                 // Set default language to browser language
                 const languageSelect = document.getElementById('language-select');
@@ -155,35 +158,48 @@
                         }
                     }
 
-                    // Insert timestamp if necessary
+                    // If there is a long pause between results, insert a timestamp only if there's no interim text
                     if (!interim_transcript) {
                         const currentResultTime = Date.now();
                         const timeSinceLastResult = currentResultTime - lastResultTime;
-                        if (transcriptionText.length === 0 || (timeSinceLastResult > 3000 && transcriptionText.length > 0)) {
-                            if (final_transcript) { // Only add timestamp if spoken words were detected
+                        if (timeSinceLastResult > 3000 && transcriptionElement.childNodes.length > 0) {
+                            if (final_transcript || interim_transcript) { // Only add timestamp if spoken words were detected
                                 const elapsedTime = currentResultTime - recordingStartTime;
                                 const minutes = Math.floor(elapsedTime / 60000);
                                 const seconds = Math.floor((elapsedTime % 60000) / 1000);
-                                const timestamp = `\n[[${padZero(minutes)}:${padZero(seconds)}]] `;
-                                transcriptionText += timestamp;       
+                                const timestamp = document.createElement('div');
+                                timestamp.style.fontWeight = 'bold';
+                                timestamp.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]] `;
+                                transcriptionElement.appendChild(timestamp);        
                             }
                         }    
                         lastResultTime = currentResultTime;
-                    }
+                    }                    
 
                     if (final_transcript) {
-                        // Append final transcript to transcriptionText
-                        transcriptionText += final_transcript;
+                        // Remove interim transcript if any
+                        const existingInterimSpan = document.getElementById(interimSpanId);
+                        if (existingInterimSpan) {
+                            existingInterimSpan.remove();
+                        }
+                        // Append final transcript
+                        const textNode = document.createTextNode(final_transcript);
+                        transcriptionElement.appendChild(textNode);
                     }
 
-                    // Prepare the interim text with styling
-                    let interimHtml = '';
                     if (interim_transcript) {
-                        interimHtml = `<span style="opacity: 0.5;">${interim_transcript}</span>`;
+                        // Remove previous interim transcript if any
+                        const existingInterimSpan = document.getElementById(interimSpanId);
+                        if (existingInterimSpan) {
+                            existingInterimSpan.remove();
+                        }
+                        // Create new interim span
+                        const interimSpan = document.createElement('span');
+                        interimSpan.id = interimSpanId;
+                        interimSpan.style.opacity = '0.5';
+                        interimSpan.textContent = interim_transcript;
+                        transcriptionElement.appendChild(interimSpan);
                     }
-
-                    // Update the transcription element
-                    transcriptionElement.innerHTML = transcriptionText + interimHtml;
                 };
 
                 recognition.onerror = event => {
@@ -236,6 +252,34 @@
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
             return `${year} ${month} ${day} ${hours}_${minutes}_${seconds}`;
+        }
+
+        // Function to convert HTML to plain text, preserving line breaks
+        function htmlToPlainText(html) {
+            // Create a temporary DOM element to parse HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+
+            // Recursively traverse the DOM and build the plain text
+            function traverse(node) {
+                let text = '';
+                node.childNodes.forEach(child => {
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        text += child.textContent;
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        if (child.tagName === 'BR' || child.tagName === 'DIV' || child.tagName === 'P') {
+                            text += '\n';
+                        }
+                        text += traverse(child);
+                    }
+                });
+                return text;
+            }
+
+            const plainText = traverse(tempDiv);
+
+            // Normalize line breaks and trim extra whitespace
+            return plainText.replace(/\n\s*\n/g, '\n\n').trim();
         }
 
         // Function to pad zero for single-digit numbers
