@@ -145,6 +145,7 @@
 
                 // Variable to track last result time
                 let lastResultTime = Date.now();
+                let interimStartTime = null; // Track interim transcript start time
 
                 // Set up recognition event handlers
                 recognition.onresult = function(event) {
@@ -158,23 +159,10 @@
                         }
                     }
 
-                    // If there is a long pause between results, insert a timestamp only if there's no interim text
-                    if (!interim_transcript) {
-                        const currentResultTime = Date.now();
-                        const timeSinceLastResult = currentResultTime - lastResultTime;
-                        if (timeSinceLastResult > 3000 && transcriptionElement.childNodes.length > 0) {
-                            if (final_transcript || interim_transcript) { // Only add timestamp if spoken words were detected
-                                const elapsedTime = currentResultTime - recordingStartTime;
-                                const minutes = Math.floor(elapsedTime / 60000);
-                                const seconds = Math.floor((elapsedTime % 60000) / 1000);
-                                const timestamp = document.createElement('div');
-                                timestamp.style.fontWeight = 'bold';
-                                timestamp.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]] `;
-                                transcriptionElement.appendChild(timestamp);        
-                            }
-                        }    
-                        lastResultTime = currentResultTime;
-                    }                    
+                    // Record the time when interim transcript starts
+                    if (interim_transcript && !interimStartTime) {
+                        interimStartTime = Date.now();
+                    }
 
                     if (final_transcript) {
                         // Remove interim transcript if any
@@ -182,6 +170,19 @@
                         if (existingInterimSpan) {
                             existingInterimSpan.remove();
                         }
+
+                        // Insert timestamp if interimStartTime is set
+                        if (interimStartTime) {
+                            const elapsedTime = interimStartTime - recordingStartTime;
+                            const minutes = Math.floor(elapsedTime / 60000);
+                            const seconds = Math.floor((elapsedTime % 60000) / 1000);
+                            const timestamp = document.createElement('div');
+                            timestamp.style.fontWeight = 'bold';
+                            timestamp.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]] `;
+                            transcriptionElement.appendChild(timestamp);
+                            interimStartTime = null; // Reset for next interim transcript
+                        }
+
                         // Append final transcript
                         const textNode = document.createTextNode(final_transcript);
                         transcriptionElement.appendChild(textNode);
