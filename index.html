@@ -56,9 +56,9 @@
                 // Audio Recording
                 const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                 const audioChunks = [];
-
+    
                 let isRecording = true;
-
+    
                 mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
                 mediaRecorder.onstop = () => {
                     const blobUrl = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
@@ -68,7 +68,7 @@
                     a.click();
                     URL.revokeObjectURL(blobUrl);
                 };
-
+    
                 mediaRecorder.start();
                 const stop = document.getElementById('stop');
                 stop.onclick = () => {
@@ -76,81 +76,91 @@
                     recognition.stop();
                     stop.style.display = 'none';
                     isRecording = false;
-
-                    { // Also download the transcription as a txt file:
-                        const blob = new Blob([transcriptionElement.innerText], { type: 'text/plain' });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = `${getDateTimePrefix()} audio transcript.txt`;
-                        a.click();
-                        URL.revokeObjectURL(a.href);
-                    }
+    
+                    // Append any remaining interim transcript
+                    transcriptionText += interim_transcript;
+                    transcriptionElement.innerText = transcriptionText;
+    
+                    // Download the transcription as a txt file
+                    const blob = new Blob([transcriptionText], { type: 'text/plain' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `${getDateTimePrefix()} audio transcript.txt`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
                 };
-
+    
                 // Automatic Transcription
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 let recognition = new SpeechRecognition();
                 recognition.continuous = true;
                 recognition.interimResults = true;
+    
                 let transcriptionElement = document.getElementById('transcription');
-
+    
                 // Set default language to browser language
                 const languageSelect = document.getElementById('language-select');
                 recognition.lang = navigator.language || 'en-US';
                 languageSelect.value = recognition.lang;
-
-                // Variables to track silence
+    
+                // Variables to track silence and transcripts
                 let transcriptionText = '';
                 let lastResultTime = Date.now();
                 let lineBreakInserted = false;
-
-                // Function to initialize recognition
-                const initializeRecognition = () => {
-                    recognition.onresult = function(event) {
-                        lastResultTime = Date.now();
-                        lineBreakInserted = false;
-                        let final_transcript = '';
-                        let interim_transcript = '';
-                        for (let i = event.resultIndex; i < event.results.length; ++i) {
-                            if (event.results[i].isFinal) {
-                                final_transcript += event.results[i][0].transcript + ' ';
-                            } else {
-                                interim_transcript += event.results[i][0].transcript + ' ';
-                            }
+                let interim_transcript = '';
+    
+                // Set up recognition event handlers
+                recognition.onresult = function(event) {
+                    lastResultTime = Date.now();
+                    let final_transcript = '';
+                    interim_transcript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            lineBreakInserted = false;
+                            final_transcript += event.results[i][0].transcript + ' ';
+                        } else {
+                            interim_transcript += event.results[i][0].transcript + ' ';
                         }
-                        transcriptionText += final_transcript;
-                        transcriptionElement.innerText = transcriptionText + interim_transcript;
-                    };
-                    recognition.onerror = event => {
-                        console.error('Speech recognition error:', event.error);
-                        initializeRecognition(); // Restart recognition when there was an error
-                    };
+                    }
+                    transcriptionText += final_transcript;
+                    transcriptionElement.innerText = transcriptionText + interim_transcript;
                 };
-
-                // Initialize and start recognition
-                initializeRecognition();
+    
+                recognition.onerror = event => {
+                    console.error('Speech recognition error:', event.error);
+                    if (isRecording) {
+                        recognition.stop();
+                        recognition.start();
+                    }
+                };
+    
+                recognition.onend = () => {
+                    if (isRecording) {
+                        recognition.start();
+                    }
+                };
+    
+                // Start recognition
                 recognition.start();
-
+    
                 // Set up interval to check for silence
                 setInterval(() => {
                     if (Date.now() - lastResultTime > 1000 && !lineBreakInserted) {
                         transcriptionText += "\n";
-                        transcriptionElement.innerText = transcriptionText;
+                        transcriptionElement.innerText = transcriptionText + interim_transcript;
                         lineBreakInserted = true;
                     }
                 }, 500);
-
+    
                 // Update language when the dropdown value changes
                 languageSelect.addEventListener('change', () => {
                     recognition.stop();
-                    recognition = new SpeechRecognition();
-                    recognition.continuous = true;
-                    recognition.interimResults = true;
                     recognition.lang = languageSelect.value;
-                    initializeRecognition();
-                    recognition.start();
+                    if (isRecording) {
+                        recognition.start();
+                    }
                 });
-
+    
                 // Warn the user before leaving the page while recording
                 window.addEventListener('beforeunload', (event) => {
                     if (isRecording) {
@@ -158,13 +168,13 @@
                         event.returnValue = 'A recording is still in progress. Are you sure you want to leave?';
                     }
                 });
-
+    
             }).catch(error => {
                 console.error(error);
                 alert("Microphone access denied or unavailable.");
             });
         }
-
+    
         // Function to get date and time prefix
         function getDateTimePrefix() {
             const now = new Date();
