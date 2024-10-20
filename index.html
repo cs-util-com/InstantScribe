@@ -45,7 +45,8 @@
     </select>
     <h3>Transcription:</h3>
     <div id="transcription-container">
-        <p id="transcription"></p>
+        <!-- Made the transcription element contenteditable -->
+        <div id="transcription" contenteditable="true"></div>
     </div>
 
     <script>
@@ -56,9 +57,9 @@
                 // Audio Recording
                 const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                 const audioChunks = [];
-    
+
                 let isRecording = true;
-    
+
                 mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
                 mediaRecorder.onstop = () => {
                     const blobUrl = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
@@ -68,7 +69,7 @@
                     a.click();
                     URL.revokeObjectURL(blobUrl);
                 };
-    
+
                 mediaRecorder.start();
                 const stop = document.getElementById('stop');
                 stop.onclick = () => {
@@ -76,12 +77,15 @@
                     recognition.stop();
                     stop.style.display = 'none';
                     isRecording = false;
-    
-                    // Append any remaining interim transcript
-                    transcriptionText += interim_transcript;
-                    transcriptionElement.innerText = transcriptionText;
-    
+
+                    // Remove interim transcript if any
+                    const interimSpan = document.getElementById('interim-transcript');
+                    if (interimSpan) {
+                        interimSpan.remove();
+                    }
+
                     // Download the transcription as a txt file
+                    const transcriptionText = transcriptionElement.textContent;
                     const blob = new Blob([transcriptionText], { type: 'text/plain' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
@@ -89,31 +93,30 @@
                     a.click();
                     URL.revokeObjectURL(a.href);
                 };
-    
+
                 // Automatic Transcription
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 let recognition = new SpeechRecognition();
                 recognition.continuous = true;
                 recognition.interimResults = true;
-    
-                let transcriptionElement = document.getElementById('transcription');
-    
+
+                const transcriptionElement = document.getElementById('transcription');
+                const interimSpanId = 'interim-transcript';
+
                 // Set default language to browser language
                 const languageSelect = document.getElementById('language-select');
                 recognition.lang = navigator.language || 'en-US';
                 languageSelect.value = recognition.lang;
-    
-                // Variables to track silence and transcripts
-                let transcriptionText = '';
+
+                // Variables to track silence and line breaks
                 let lastResultTime = Date.now();
                 let lineBreakInserted = false;
-                let interim_transcript = '';
-    
+
                 // Set up recognition event handlers
                 recognition.onresult = function(event) {
                     lastResultTime = Date.now();
                     let final_transcript = '';
-                    interim_transcript = '';
+                    let interim_transcript = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
                             lineBreakInserted = false;
@@ -122,10 +125,33 @@
                             interim_transcript += event.results[i][0].transcript + ' ';
                         }
                     }
-                    transcriptionText += final_transcript;
-                    transcriptionElement.innerText = transcriptionText + interim_transcript;
+
+                    if (final_transcript) {
+                        // Remove interim transcript if any
+                        const existingInterimSpan = document.getElementById(interimSpanId);
+                        if (existingInterimSpan) {
+                            existingInterimSpan.remove();
+                        }
+                        // Append final transcript
+                        const textNode = document.createTextNode(final_transcript);
+                        transcriptionElement.appendChild(textNode);
+                    }
+
+                    if (interim_transcript) {
+                        // Remove previous interim transcript if any
+                        const existingInterimSpan = document.getElementById(interimSpanId);
+                        if (existingInterimSpan) {
+                            existingInterimSpan.remove();
+                        }
+                        // Create new interim span
+                        const interimSpan = document.createElement('span');
+                        interimSpan.id = interimSpanId;
+                        interimSpan.style.opacity = '0.5';
+                        interimSpan.textContent = interim_transcript;
+                        transcriptionElement.appendChild(interimSpan);
+                    }
                 };
-    
+
                 recognition.onerror = event => {
                     console.error('Speech recognition error:', event.error);
                     if (isRecording) {
@@ -133,25 +159,26 @@
                         recognition.start();
                     }
                 };
-    
+
                 recognition.onend = () => {
-                    if (isRecording) {
+                    if (isRecording) { // Continue recognition if still recording
                         recognition.start();
                     }
                 };
-    
+
                 // Start recognition
                 recognition.start();
-    
+
                 // Set up interval to check for silence
                 setInterval(() => {
                     if (Date.now() - lastResultTime > 1000 && !lineBreakInserted) {
-                        transcriptionText += "\n";
-                        transcriptionElement.innerText = transcriptionText + interim_transcript;
+                        // Append a line break
+                        const br = document.createElement('br');
+                        transcriptionElement.appendChild(br);
                         lineBreakInserted = true;
                     }
                 }, 500);
-    
+
                 // Update language when the dropdown value changes
                 languageSelect.addEventListener('change', () => {
                     recognition.stop();
@@ -160,7 +187,7 @@
                         recognition.start();
                     }
                 });
-    
+
                 // Warn the user before leaving the page while recording
                 window.addEventListener('beforeunload', (event) => {
                     if (isRecording) {
@@ -168,13 +195,13 @@
                         event.returnValue = 'A recording is still in progress. Are you sure you want to leave?';
                     }
                 });
-    
+
             }).catch(error => {
                 console.error(error);
                 alert("Microphone access denied or unavailable.");
             });
         }
-    
+
         // Function to get date and time prefix
         function getDateTimePrefix() {
             const now = new Date();
