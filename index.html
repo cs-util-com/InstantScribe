@@ -159,7 +159,7 @@
                     if (!interim_transcript) {
                         const currentResultTime = Date.now();
                         const timeSinceLastResult = currentResultTime - lastResultTime;
-                        if (timeSinceLastResult > 3000 && transcriptionText.length > 0) {
+                        if (transcriptionText.length === 0 || (timeSinceLastResult > 3000 && transcriptionText.length > 0)) {
                             if (final_transcript) { // Only add timestamp if spoken words were detected
                                 const elapsedTime = currentResultTime - recordingStartTime;
                                 const minutes = Math.floor(elapsedTime / 60000);
