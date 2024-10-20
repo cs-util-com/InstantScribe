@@ -98,6 +98,7 @@
                     };
                     recognition.onerror = event => {
                         console.error('Speech recognition error:', event.error);
+                        initializeRecognition(); // Restart recognition when there was an error
                     };
                 };
 
