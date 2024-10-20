@@ -26,6 +26,8 @@
             border-radius: 4px;
             max-width: 90%;
             max-width: 1200px;
+            white-space: pre-wrap;
+            font-family: monospace;
         }
     </style>
 </head>
@@ -167,7 +169,7 @@
                                 const seconds = Math.floor((elapsedTime % 60000) / 1000);
                                 const timestamp = document.createElement('div');
                                 timestamp.style.fontWeight = 'bold';
-                                timestamp.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]]`;
+                                timestamp.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]] `;
                                 transcriptionElement.appendChild(timestamp);        
                             }
                         }    
