@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Recorder</title>
     <style>
         button {
@@ -84,9 +83,14 @@
                         interimSpan.remove();
                     }
 
+                    // Get the transcription content including user edits
+                    const transcriptionHTML = transcriptionElement.innerHTML;
+
+                    // Convert HTML to plain text with preserved line breaks
+                    const transcriptionText = htmlToPlainText(transcriptionHTML);
+
                     // Download the transcription as a txt file
-                    const transcriptionText = transcriptionElement.textContent;
-                    const blob = new Blob([transcriptionText], { type: 'text/plain' });
+                    const blob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
                     a.download = `${getDateTimePrefix()} audio transcript.txt`;
@@ -120,9 +124,9 @@
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
                             lineBreakInserted = false;
-                            final_transcript += event.results[i][0].transcript + ' ';
+                            final_transcript += event.results[i][0].transcript;
                         } else {
-                            interim_transcript += event.results[i][0].transcript + ' ';
+                            interim_transcript += event.results[i][0].transcript;
                         }
                     }
 
@@ -212,6 +216,34 @@
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
             return `${year} ${month} ${day} ${hours}_${minutes}_${seconds}`;
+        }
+
+        // Function to convert HTML to plain text, preserving line breaks
+        function htmlToPlainText(html) {
+            // Create a temporary DOM element to parse HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+
+            // Recursively traverse the DOM and build the plain text
+            function traverse(node) {
+                let text = '';
+                node.childNodes.forEach(child => {
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        text += child.textContent;
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        if (child.tagName === 'BR' || child.tagName === 'DIV' || child.tagName === 'P') {
+                            text += '\n';
+                        }
+                        text += traverse(child);
+                    }
+                });
+                return text;
+            }
+
+            const plainText = traverse(tempDiv);
+
+            // Normalize line breaks and trim extra whitespace
+            return plainText.replace(/\n\s*\n/g, '\n\n').trim();
         }
     </script>
 </body>
