@@ -70,6 +70,7 @@
                 };
 
                 mediaRecorder.start();
+                const recordingStartTime = Date.now(); // Record the start time
                 const stop = document.getElementById('stop');
                 stop.onclick = () => {
                     mediaRecorder.stop();
@@ -112,18 +113,35 @@
                 recognition.lang = navigator.language || 'en-US';
                 languageSelect.value = recognition.lang;
 
-                // Variables to track silence and line breaks
+                // Variable to track last result time
                 let lastResultTime = Date.now();
-                let lineBreakInserted = false;
 
                 // Set up recognition event handlers
                 recognition.onresult = function(event) {
-                    lastResultTime = Date.now();
+                    const currentResultTime = Date.now();
+                    const timeSinceLastResult = currentResultTime - lastResultTime;
+
+                    if (timeSinceLastResult > 1000 && transcriptionElement.childNodes.length > 0) {
+                        // Insert timestamp and line break
+                        const elapsedTime = currentResultTime - recordingStartTime;
+                        const minutes = Math.floor(elapsedTime / 60000);
+                        const seconds = Math.floor((elapsedTime % 60000) / 1000);
+                        const timestamp = document.createElement('div');
+                        timestamp.style.fontWeight = 'bold';
+                        timestamp.textContent = `${padZero(minutes)}:${padZero(seconds)}`;
+                        transcriptionElement.appendChild(timestamp);
+
+                        // Append a line break
+                        const br = document.createElement('br');
+                        transcriptionElement.appendChild(br);
+                    }
+
+                    lastResultTime = currentResultTime;
+
                     let final_transcript = '';
                     let interim_transcript = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
-                            lineBreakInserted = false;
                             final_transcript += event.results[i][0].transcript;
                         } else {
                             interim_transcript += event.results[i][0].transcript;
@@ -172,16 +190,6 @@
 
                 // Start recognition
                 recognition.start();
-
-                // Set up interval to check for silence
-                setInterval(() => {
-                    if (Date.now() - lastResultTime > 1000 && !lineBreakInserted) {
-                        // Append a line break
-                        const br = document.createElement('br');
-                        transcriptionElement.appendChild(br);
-                        lineBreakInserted = true;
-                    }
-                }, 500);
 
                 // Update language when the dropdown value changes
                 languageSelect.addEventListener('change', () => {
@@ -244,6 +252,11 @@
 
             // Normalize line breaks and trim extra whitespace
             return plainText.replace(/\n\s*\n/g, '\n\n').trim();
+        }
+
+        // Function to pad zero for single-digit numbers
+        function padZero(num) {
+            return num < 10 ? '0' + num : num;
         }
     </script>
 </body>
