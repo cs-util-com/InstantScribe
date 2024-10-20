@@ -4,6 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Recorder</title>
+    <style>
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        select {
+            padding: 5px;
+            margin: 5px;
+        }
+        #transcription-container {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-width: 600px;
+        }
+    </style>
 </head>
 <body>
     <button id="stop">Save Recording</button>
@@ -18,8 +42,8 @@
         <option value="ja-JP">Japanese</option>
         <option value="zh-CN">Chinese (Simplified)</option>
     </select>
+    <h3>Transcription:</h3>
     <div id="transcription-container">
-        <h3>Transcription:</h3>
         <p id="transcription"></p>
     </div>
 
