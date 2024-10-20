@@ -118,22 +118,6 @@
 
                 // Set up recognition event handlers
                 recognition.onresult = function(event) {
-
-                    // If there is a long pause between results, insert a timestamp:
-                    const currentResultTime = Date.now();
-                    const timeSinceLastResult = currentResultTime - lastResultTime;
-                    
-                    if (timeSinceLastResult > 2000 && transcriptionElement.childNodes.length > 0) {                  
-                        const elapsedTime = currentResultTime - recordingStartTime;
-                        const minutes = Math.floor(elapsedTime / 60000);
-                        const seconds = Math.floor((elapsedTime % 60000) / 1000);
-                        const timestamp = document.createElement('div');
-                        timestamp.style.fontWeight = 'bold';
-                        timestamp.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]]`;
-                        transcriptionElement.appendChild(timestamp);                                                
-                    }     
-                    lastResultTime = currentResultTime;   
-                    
                     let final_transcript = '';
                     let interim_transcript = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -143,6 +127,24 @@
                             interim_transcript += event.results[i][0].transcript;
                         }
                     }
+
+                    // If there is a long pause between results, insert a timestamp only if there's no interim text
+                    if (!interim_transcript) {
+                        const currentResultTime = Date.now();
+                        const timeSinceLastResult = currentResultTime - lastResultTime;
+                        if (timeSinceLastResult > 3000 && transcriptionElement.childNodes.length > 0) {
+                            if (final_transcript || interim_transcript) { // Only add timestamp if spoken words were detected
+                                const elapsedTime = currentResultTime - recordingStartTime;
+                                const minutes = Math.floor(elapsedTime / 60000);
+                                const seconds = Math.floor((elapsedTime % 60000) / 1000);
+                                const timestamp = document.createElement('div');
+                                timestamp.style.fontWeight = 'bold';
+                                timestamp.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]]`;
+                                transcriptionElement.appendChild(timestamp);        
+                            }
+                        }    
+                        lastResultTime = currentResultTime;
+                    }                    
 
                     if (final_transcript) {
                         // Remove interim transcript if any
