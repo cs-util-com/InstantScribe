@@ -164,7 +164,7 @@
                                 const elapsedTime = currentResultTime - recordingStartTime;
                                 const minutes = Math.floor(elapsedTime / 60000);
                                 const seconds = Math.floor((elapsedTime % 60000) / 1000);
-                                const timestamp = `\n[[${padZero(minutes)}:${padZero(seconds)}]]`;
+                                const timestamp = `\n[[${padZero(minutes)}:${padZero(seconds)}]] `;
                                 transcriptionText += timestamp;       
                             }
                         }    
