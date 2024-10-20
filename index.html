@@ -31,7 +31,7 @@
 </head>
 <body>
     <button id="stop">Save Recording</button>
-    <label for="language-select">Choose language:</label>
+    <label for="language-select">Transcription language:</label>
     <select id="language-select">
         <option value="en-US">English (US)</option>
         <option value="en-GB">English (UK)</option>
@@ -53,18 +53,46 @@
             alert("Your browser does not support the required APIs for audio recording and transcription.");
         } else {
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                // Preferred MIME types in order
+                const mimeTypes = ['audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/webm'];
+                let mimeType = null;
+
+                // Select the first supported MIME type
+                for (let i = 0; i < mimeTypes.length; i++) {
+                    if (MediaRecorder.isTypeSupported(mimeTypes[i])) {
+                        mimeType = mimeTypes[i];
+                        break;
+                    }
+                }
+
+                if (mimeType === null) {
+                    alert("Your browser does not support MP3, OGG, MP4, or WebM audio recording.");
+                    return;
+                }
+
+                // Mapping MIME types to file extensions
+                const mimeTypeToExtension = {
+                    'audio/mpeg': 'mp3',
+                    'audio/mp3': 'mp3',
+                    'audio/ogg': 'ogg',
+                    'audio/mp4': 'mp4',
+                    'audio/webm': 'webm'
+                };
+                const extension = mimeTypeToExtension[mimeType] || 'webm';
+
                 // Audio Recording
-                const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                const mediaRecorder = new MediaRecorder(stream, { mimeType });
                 const audioChunks = [];
 
                 let isRecording = true;
 
                 mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
                 mediaRecorder.onstop = () => {
-                    const blobUrl = URL.createObjectURL(new Blob(audioChunks, { type: 'audio/webm' }));
+                    const blob = new Blob(audioChunks, { type: mimeType });
+                    const blobUrl = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = blobUrl;
-                    a.download = `${getDateTimePrefix()} audio recording.webm`;
+                    a.download = `${getDateTimePrefix()} audio recording.${extension}`;
                     a.click();
                     URL.revokeObjectURL(blobUrl);
                 };
