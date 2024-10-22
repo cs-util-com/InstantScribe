@@ -56,16 +56,8 @@
         } else {
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 // Preferred MIME types in order
-                const mimeTypes = ['audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/webm'];
-                let mimeType = null;
-
-                // Select the first supported MIME type
-                for (let i = 0; i < mimeTypes.length; i++) {
-                    if (MediaRecorder.isTypeSupported(mimeTypes[i])) {
-                        mimeType = mimeTypes[i];
-                        break;
-                    }
-                }
+                const mimeTypes = ['audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/webm'];
+                const mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || null;
 
                 if (mimeType === null) {
                     alert("Your browser does not support MP3, OGG, MP4, or WebM audio recording.");
@@ -77,13 +69,16 @@
                     'audio/mpeg': 'mp3',
                     'audio/mp3': 'mp3',
                     'audio/ogg': 'ogg',
-                    'audio/mp4': 'mp4',
+                    'audio/mp4': 'mp4',                   
                     'audio/webm': 'webm'
                 };
                 const extension = mimeTypeToExtension[mimeType] || 'webm';
 
                 // Audio Recording
-                const mediaRecorder = new MediaRecorder(stream, { mimeType });
+                const mediaRecorder = new MediaRecorder(stream, { 
+                    mimeType,
+                    audioBitsPerSecond: 32000, // 32kbps is good for speech
+                });
                 const audioChunks = [];
 
                 let startTime = new Date();           
