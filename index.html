@@ -86,6 +86,7 @@
                 const mediaRecorder = new MediaRecorder(stream, { mimeType });
                 const audioChunks = [];
 
+                let startTime = new Date();           
                 let isRecording = true;
 
                 mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
@@ -94,7 +95,7 @@
                     const blobUrl = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = blobUrl;
-                    a.download = `${getDateTimePrefix()} audio recording.${extension}`;
+                    a.download = `${getDateTimePrefix(startTime)} audio recording.${extension}`;
                     a.click();
                     URL.revokeObjectURL(blobUrl);
                 };
@@ -124,7 +125,7 @@
                     const blob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = `${getDateTimePrefix()} audio transcript.txt`;
+                    a.download = `${getDateTimePrefix(startTime)} audio transcript.txt`;
                     a.click();
                     URL.revokeObjectURL(a.href);
                 };
@@ -245,8 +246,8 @@
         }
 
         // Function to get date and time prefix
-        function getDateTimePrefix() {
-            const now = new Date();
+        function getDateTimePrefix(startTime) {
+            const now = new Date(startTime);  // Use the provided start time
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
