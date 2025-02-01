@@ -16,7 +16,7 @@
     button:hover {
       background-color: #0056b3;
     }
-    select {
+    select, input[type="text"] {
       padding: 5px;
       margin: 5px;
     }
@@ -30,21 +30,31 @@
       white-space: pre-wrap;
       font-family: monospace;
     }
+    .controls {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
-  <button id="stop">Save Recording</button>
-  <label for="language-select">Transcription language:</label>
-  <select id="language-select">
-    <option value="en-US">English (US)</option>
-    <option value="en-GB">English (UK)</option>
-    <option value="de-DE">German</option>
-    <option value="fr-FR">French</option>
-    <option value="es-ES">Spanish</option>
-    <option value="it-IT">Italian</option>
-    <option value="ja-JP">Japanese</option>
-    <option value="zh-CN">Chinese (Simplified)</option>
-  </select>
+  <div class="controls">
+    <!-- New input field for custom file title -->
+    <label for="custom-filename">File Title:</label>
+    <input type="text" id="custom-filename" placeholder="Enter custom title...">
+    <br>
+    <button id="stop">Save Recording</button>
+    <label for="language-select">Transcription language:</label>
+    <select id="language-select">
+      <option value="en-US">English (US)</option>
+      <option value="en-GB">English (UK)</option>
+      <option value="de-DE">German</option>
+      <option value="fr-FR">French</option>
+      <option value="es-ES">Spanish</option>
+      <option value="it-IT">Italian</option>
+      <option value="ja-JP">Japanese</option>
+      <option value="zh-CN">Chinese (Simplified)</option>
+    </select>
+  </div>
+
   <h3>Transcription:</h3>
   <div id="transcription-container">
     <!-- Made the transcription element contenteditable -->
@@ -68,8 +78,9 @@
           const transcriptionElement = document.getElementById('transcription');
           const languageSelect = document.getElementById('language-select');
           const stopButton = document.getElementById('stop');
+          const customFilenameInput = document.getElementById('custom-filename');
 
-          // Determine a supported audio MIME type
+          // Determine a supported audio MIME type.
           const mimeTypes = ['audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/webm'];
           const mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || null;
 
@@ -101,11 +112,14 @@
           };
 
           mediaRecorder.onstop = () => {
+            // Construct the audio file name using the custom title (if provided).
+            const customTitle = customFilenameInput.value.trim();
+            const audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`;
             const audioBlob = new Blob(audioChunks, { type: mimeType });
             const blobUrl = URL.createObjectURL(audioBlob);
             const a = document.createElement('a');
             a.href = blobUrl;
-            a.download = `${getDateTimePrefix(recordingStartTime)} audio recording.${fileExtension}`;
+            a.download = audioFileName;
             a.click();
             URL.revokeObjectURL(blobUrl);
           };
@@ -220,11 +234,15 @@
             const transcriptionHTML = transcriptionElement.innerHTML;
             const transcriptionText = htmlToPlainText(transcriptionHTML);
 
+            // Construct the transcript file name using the custom title (if provided).
+            const customTitle = customFilenameInput.value.trim();
+            const transcriptFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio transcript.txt`;
+
             // Create and trigger the download of the transcription.
             const textBlob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(textBlob);
-            a.download = `${getDateTimePrefix(recordingStartTime)} audio transcript.txt`;
+            a.download = transcriptFileName;
             a.click();
             URL.revokeObjectURL(a.href);
           });
