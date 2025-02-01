@@ -4,35 +4,11 @@
   <meta charset="UTF-8">
   <title>Audio Recorder</title>
   <style>
-    button {
-      padding: 10px 15px;
-      margin: 5px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    select, input[type="text"] {
-      padding: 5px;
-      margin: 5px;
-    }
-    #transcription-container {
-      margin-top: 20px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      width: 90%;
-      max-width: 1200px;
-      white-space: pre-wrap;
-      font-family: monospace;
-    }
-    .controls {
-      margin-bottom: 10px;
-    }
+    button { padding: 10px 15px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    select, input[type="text"] { padding: 5px; margin: 5px; }
+    #transcription-container { margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 90%; max-width: 1200px; white-space: pre-wrap; font-family: monospace; }
+    .controls { margin-bottom: 10px; }
   </style>
 </head>
 <body>
@@ -63,26 +39,22 @@
 
   <script>
     // Check if the browser supports the required APIs
-    if (
-      !window.MediaRecorder ||
-      !("webkitSpeechRecognition" in window || "SpeechRecognition" in window)
-    ) {
+    if (!window.MediaRecorder || !(window.webkitSpeechRecognition || window.SpeechRecognition)) {
       alert("Your browser does not support the required APIs for audio recording and transcription.");
     } else {
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
           // Use a single timestamp for the entire recording session.
           const recordingStartTime = Date.now();
-
           // Grab DOM elements early for use in event handlers.
-          const transcriptionElement = document.getElementById('transcription');
-          const languageSelect = document.getElementById('language-select');
-          const stopButton = document.getElementById('stop');
-          const customFilenameInput = document.getElementById('custom-filename');
+          const transcriptionElement = document.getElementById('transcription'),
+                languageSelect = document.getElementById('language-select'),
+                stopButton = document.getElementById('stop'),
+                customFilenameInput = document.getElementById('custom-filename');
 
           // Determine a supported audio MIME type.
-          const mimeTypes = ['audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/webm'];
-          const mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || null;
+          const mimeTypes = ['audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/webm'],
+                mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || null;
 
           if (!mimeType) {
             alert("Your browser does not support MP3, OGG, MP4, or WebM audio recording.");
@@ -96,78 +68,55 @@
             'audio/ogg': 'ogg',
             'audio/mp4': 'mp4',
             'audio/webm': 'webm'
-          };
-          const fileExtension = mimeTypeToExtension[mimeType] || 'webm';
+          },
+          fileExtension = mimeTypeToExtension[mimeType] || 'webm';
 
           // Set up MediaRecorder for audio recording.
-          const mediaRecorder = new MediaRecorder(stream, {
-            mimeType,
-            audioBitsPerSecond: 32000, // 32kbps is suitable for speech.
-          });
-          const audioChunks = [];
-          mediaRecorder.ondataavailable = event => {
-            if (event.data.size > 0) {
-              audioChunks.push(event.data);
-            }
-          };
+          const mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 32000 }),
+                audioChunks = [];
+          mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
 
           mediaRecorder.onstop = () => {
             // Construct the audio file name using the custom title (if provided).
-            const customTitle = customFilenameInput.value.trim();
-            const audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`;
-            const audioBlob = new Blob(audioChunks, { type: mimeType });
-            const blobUrl = URL.createObjectURL(audioBlob);
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = audioFileName;
-            a.click();
-            URL.revokeObjectURL(blobUrl);
+            const customTitle = customFilenameInput.value.trim(),
+                  audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`,
+                  audioBlob = new Blob(audioChunks, { type: mimeType });
+            downloadBlob(audioBlob, audioFileName);
           };
 
           // Start recording audio immediately.
           mediaRecorder.start();
 
           // Set up Speech Recognition for live transcription.
-          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          let recognition = new SpeechRecognition();
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition,
+                recognition = new SpeechRecognition();
           recognition.continuous = true;
           recognition.interimResults = true;
           recognition.lang = navigator.language || 'en-US';
           languageSelect.value = recognition.lang;
 
-          let isRecording = true;
-          let interimStartTime = null; // Tracks when an interim transcript begins.
+          let isRecording = true,
+              interimStartTime = null; // Tracks when an interim transcript begins.
           const interimSpanId = 'interim-transcript';
 
-          recognition.onresult = (event) => {
-            let finalTranscript = '';
-            let interimTranscript = '';
-
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
+          recognition.onresult = event => {
+            let finalTranscript = '', interimTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
               const result = event.results[i][0].transcript;
-              if (event.results[i].isFinal) {
-                finalTranscript += result;
-              } else {
-                interimTranscript += result;
-              }
+              event.results[i].isFinal ? finalTranscript += result : interimTranscript += result;
             }
 
             // If an interim result begins, note its start time.
-            if (interimTranscript && !interimStartTime) {
-              interimStartTime = Date.now();
-            }
+            if (interimTranscript && !interimStartTime) interimStartTime = Date.now();
 
             // When a final result is available, insert it along with a timestamp.
             if (finalTranscript) {
-              const existingInterimSpan = document.getElementById(interimSpanId);
-              if (existingInterimSpan) {
-                existingInterimSpan.remove();
-              }
+              removeInterimTranscript();
               if (interimStartTime) {
-                const elapsed = interimStartTime - recordingStartTime;
-                const minutes = Math.floor(elapsed / 60000);
-                const seconds = Math.floor((elapsed % 60000) / 1000);
-                const timestampDiv = document.createElement('div');
+                const elapsed = interimStartTime - recordingStartTime,
+                      minutes = Math.floor(elapsed / 60000),
+                      seconds = Math.floor((elapsed % 60000) / 1000),
+                      timestampDiv = document.createElement('div');
                 timestampDiv.style.fontWeight = 'bold';
                 timestampDiv.style.color = 'lightgray';
                 timestampDiv.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]] `;
@@ -179,10 +128,7 @@
 
             // Always update or add the interim transcript.
             if (interimTranscript) {
-              const existingInterimSpan = document.getElementById(interimSpanId);
-              if (existingInterimSpan) {
-                existingInterimSpan.remove();
-              }
+              removeInterimTranscript();
               const interimSpan = document.createElement('span');
               interimSpan.id = interimSpanId;
               interimSpan.style.opacity = '0.5';
@@ -191,20 +137,13 @@
             }
           };
 
-          recognition.onerror = (event) => {
+          recognition.onerror = event => {
             console.error('Speech recognition error:', event.error);
             // Attempt to restart if still recording.
-            if (isRecording) {
-              recognition.stop();
-              recognition.start();
-            }
+            if (isRecording) { recognition.stop(); recognition.start(); }
           };
 
-          recognition.onend = () => {
-            if (isRecording) {
-              recognition.start();
-            }
-          };
+          recognition.onend = () => { if (isRecording) recognition.start(); };
 
           recognition.start();
 
@@ -212,9 +151,7 @@
           languageSelect.addEventListener('change', () => {
             recognition.stop();
             recognition.lang = languageSelect.value;
-            if (isRecording) {
-              recognition.start();
-            }
+            if (isRecording) recognition.start();
           });
 
           // When the user clicks the stop button, stop both audio and transcription.
@@ -225,30 +162,19 @@
             isRecording = false;
 
             // Remove any lingering interim transcript.
-            const interimSpan = document.getElementById(interimSpanId);
-            if (interimSpan) {
-              interimSpan.remove();
-            }
+            removeInterimTranscript();
 
             // Retrieve the (possibly edited) transcription.
-            const transcriptionHTML = transcriptionElement.innerHTML;
-            const transcriptionText = htmlToPlainText(transcriptionHTML);
-
-            // Construct the transcript file name using the custom title (if provided).
-            const customTitle = customFilenameInput.value.trim();
-            const transcriptFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio transcript.txt`;
-
-            // Create and trigger the download of the transcription.
-            const textBlob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(textBlob);
-            a.download = transcriptFileName;
-            a.click();
-            URL.revokeObjectURL(a.href);
+            const transcriptionHTML = transcriptionElement.innerHTML,
+                  transcriptionText = htmlToPlainText(transcriptionHTML),
+                  customTitle = customFilenameInput.value.trim(),
+                  transcriptFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio transcript.txt`,
+                  textBlob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
+            downloadBlob(textBlob, transcriptFileName);
           });
 
           // Warn the user if they try to leave while a recording is in progress.
-          window.addEventListener('beforeunload', (event) => {
+          window.addEventListener('beforeunload', event => {
             if (isRecording) {
               event.preventDefault();
               event.returnValue = 'A recording is still in progress. Are you sure you want to leave?';
@@ -261,15 +187,30 @@
         });
     }
 
+    // Utility: Trigger download of a blob with a given file name.
+    function downloadBlob(blob, fileName) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // Utility: Remove the interim transcript span if it exists.
+    function removeInterimTranscript() {
+      const interim = document.getElementById('interim-transcript');
+      if (interim) interim.remove();
+    }
+
     // Utility: Generate a date/time prefix for file names.
     function getDateTimePrefix(time) {
       const date = new Date(time);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
+      const year = date.getFullYear(),
+            month = String(date.getMonth() + 1).padStart(2, '0'),
+            day = String(date.getDate()).padStart(2, '0'),
+            hours = String(date.getHours()).padStart(2, '0'),
+            minutes = String(date.getMinutes()).padStart(2, '0'),
+            seconds = String(date.getSeconds()).padStart(2, '0');
       return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
     }
 
@@ -277,22 +218,17 @@
     function htmlToPlainText(html) {
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = html;
-
       function traverse(node) {
         let text = '';
         node.childNodes.forEach(child => {
-          if (child.nodeType === Node.TEXT_NODE) {
-            text += child.textContent;
-          } else if (child.nodeType === Node.ELEMENT_NODE) {
-            if (['BR', 'DIV', 'P'].includes(child.tagName)) {
-              text += '\n';
-            }
+          if (child.nodeType === Node.TEXT_NODE) text += child.textContent;
+          else if (child.nodeType === Node.ELEMENT_NODE) {
+            if (['BR', 'DIV', 'P'].includes(child.tagName)) text += '\n';
             text += traverse(child);
           }
         });
         return text;
       }
-
       return traverse(tempDiv).replace(/\n\s*\n/g, '\n\n').trim();
     }
 
