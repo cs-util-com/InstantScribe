@@ -1,17 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Audio Recorder</title>
   <!-- This meta tag ensures proper scaling on mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Base styles */ body {font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f7f7f7;} .container {max-width: 800px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);} h3 {margin: 10px 0; font-size: 1.2rem;}
-    /* Controls layout */ .controls {display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 15px;} .control-group {display: flex; align-items: center; gap: 5px;} input[type="text"], select {padding: 6px 8px; font-size: 1rem;} button {padding: 8px 12px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem;} button:hover {background-color: #0056b3;}
-    /* Transcription box */ #transcription-container {margin-top: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; white-space: pre-wrap; font-family: monospace; font-size: 0.9rem; background: #fafafa;}
-    /* Responsive adjustments for small screens */ @media (max-width:600px){.controls {flex-direction: column; align-items: stretch;} .control-group, button {width: 100%;}}
+    /* Base styles */
+    body {
+      font-family: Consolas, monospace;
+      margin: 0;
+      padding: 10px;
+      background: #f7f7f7;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    h3 {
+      margin: 10px 0;
+      font-size: 1.2rem;
+    }
+
+    /* Controls layout */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    input[type="text"],
+    select {
+      padding: 6px 8px;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 8px 12px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Transcription box */
+    #transcription-container {
+      margin-top: 15px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-family: Consolas, monospace;
+      font-size: 0.9rem;
+      background: #fafafa;
+    }
+
+    /* Responsive adjustments for small screens */
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .control-group,
+      button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="controls">
@@ -66,13 +145,13 @@
         }
 
         // Map MIME types to file extensions.
-          const mimeTypeToExtension = {
-            'audio/mpeg': 'mp3',
-            'audio/mp3': 'mp3',
-            'audio/ogg': 'ogg',
-            'audio/mp4': 'mp4',
-            'audio/webm': 'webm'
-          },
+        const mimeTypeToExtension = {
+          'audio/mpeg': 'mp3',
+          'audio/mp3': 'mp3',
+          'audio/ogg': 'ogg',
+          'audio/mp4': 'mp4',
+          'audio/webm': 'webm'
+        },
               fileExtension = mimeTypeToExtension[mimeType] || 'webm';
 
         // Set up MediaRecorder for audio recording.
@@ -111,14 +190,15 @@
           if (interimTranscript && !interimStartTime) interimStartTime = Date.now();
 
           // When a final result is available, insert it along with a timestamp.
-            if (finalTranscript) {
-              removeInterimTranscript();
-              if (interimStartTime) {
+          if (finalTranscript) {
+            removeInterimTranscript();
+            if (interimStartTime) {
               const elapsed = interimStartTime - recordingStartTime,
                     minutes = Math.floor(elapsed / 60000),
                     seconds = Math.floor((elapsed % 60000) / 1000),
                     timestampDiv = document.createElement('div');
-              timestampDiv.style.fontWeight = 'bold'; timestampDiv.style.color = 'lightgray';
+              timestampDiv.style.fontWeight = 'bold';
+              timestampDiv.style.color = 'lightgray';
               timestampDiv.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]] `;
               transcriptionElement.appendChild(timestampDiv);
               interimStartTime = null;
@@ -139,7 +219,7 @@
 
         recognition.onerror = event => { 
           console.error('Speech recognition error:', event.error); 
-            // Attempt to restart if still recording.
+          // Attempt to restart if still recording.
           if (isRecording) { 
             recognition.stop(); 
             recognition.start(); 
@@ -147,14 +227,14 @@
         };
         recognition.onend = () => { if (isRecording) recognition.start(); };
         recognition.start();
-        
+
         // Update language if the user selects a new option.
         languageSelect.addEventListener('change', () => { 
           recognition.stop(); 
           recognition.lang = languageSelect.value; 
           if (isRecording) recognition.start(); 
         });
-        
+
         // When the user clicks the stop button, stop both audio and transcription.
         stopButton.addEventListener('click', () => {
           mediaRecorder.stop(); 
@@ -195,13 +275,13 @@
       a.click(); 
       URL.revokeObjectURL(a.href); 
     }
-    
+
     // Utility: Remove the interim transcript span if it exists.
     function removeInterimTranscript() { 
       const interim = document.getElementById('interim-transcript'); 
       if (interim) interim.remove(); 
     }
-    
+
     // Utility: Generate a date/time prefix for file names.
     function getDateTimePrefix(time) { 
       const date = new Date(time), 
@@ -213,7 +293,7 @@
         seconds = String(date.getSeconds()).padStart(2, '0'); 
       return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`; 
     }
-    
+
     // Utility: Convert HTML content to plain text while preserving line breaks.
     function htmlToPlainText(html) { 
       const tempDiv = document.createElement('div'); 
@@ -223,7 +303,7 @@
         node.childNodes.forEach(child => { 
           if (child.nodeType === Node.TEXT_NODE) text += child.textContent; 
           else if (child.nodeType === Node.ELEMENT_NODE) { 
-            if (['BR', 'DIV', 'P'].includes(child.tagName)) text += '\n';
+            if (['BR','DIV','P'].includes(child.tagName)) text += '\n';
             text += traverse(child); 
           } 
         }); 
@@ -231,7 +311,7 @@
       } 
       return traverse(tempDiv).replace(/\n\s*\n/g, '\n\n').trim(); 
     }
-    
+
     // Utility: Pad single-digit numbers with a leading zero.
     function padZero(num) { return num < 10 ? '0' + num : num; }
 
