@@ -3,38 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <title>Audio Recorder</title>
+  <!-- This meta tag ensures proper scaling on mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    button { padding: 10px 15px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background-color: #0056b3; }
-    select, input[type="text"] { padding: 5px; margin: 5px; }
-    #transcription-container { margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 90%; max-width: 1200px; white-space: pre-wrap; font-family: monospace; }
-    .controls { margin-bottom: 10px; }
+    /* Base styles */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 10px;
+      background: #f7f7f7;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    h3 {
+      margin: 10px 0;
+      font-size: 1.2rem;
+    }
+
+    /* Controls layout */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    input[type="text"],
+    select {
+      padding: 6px 8px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 8px 12px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Transcription box */
+    #transcription-container {
+      margin-top: 15px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 0.9rem;
+      background: #fafafa;
+    }
+
+    /* Responsive adjustments for small screens */
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .control-group,
+      button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="controls">
-    <!-- New input field for custom file title -->
-    <label for="custom-filename">File Title:</label>
-    <input type="text" id="custom-filename" placeholder="Enter custom title...">
-    <br>
-    <button id="stop">Save Recording</button>
-    <label for="language-select">Transcription language:</label>
-    <select id="language-select">
-      <option value="en-US">English (US)</option>
-      <option value="en-GB">English (UK)</option>
-      <option value="de-DE">German</option>
-      <option value="fr-FR">French</option>
-      <option value="es-ES">Spanish</option>
-      <option value="it-IT">Italian</option>
-      <option value="ja-JP">Japanese</option>
-      <option value="zh-CN">Chinese (Simplified)</option>
-    </select>
-  </div>
+  <div class="container">
+    <div class="controls">
+      <div class="control-group">
+        <label for="custom-filename">File Title:</label>
+        <input type="text" id="custom-filename" placeholder="Enter title...">
+      </div>
+      <button id="stop">Save Recording</button>
+      <div class="control-group">
+        <label for="language-select">Transcription language:</label>
+        <select id="language-select">
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="de-DE">German</option>
+          <option value="fr-FR">French</option>
+          <option value="es-ES">Spanish</option>
+          <option value="it-IT">Italian</option>
+          <option value="ja-JP">Japanese</option>
+          <option value="zh-CN">Chinese (Simplified)</option>
+        </select>
+      </div>
+    </div>
 
-  <h3>Transcription:</h3>
-  <div id="transcription-container">
-    <!-- Made the transcription element contenteditable -->
-    <div id="transcription" contenteditable="true"></div>
+    <h3>Transcription:</h3>
+    <div id="transcription-container">
+      <!-- The transcription element is contenteditable -->
+      <div id="transcription" contenteditable="true"></div>
+    </div>
   </div>
 
   <script>
@@ -46,7 +121,7 @@
         .then(stream => {
           // Use a single timestamp for the entire recording session.
           const recordingStartTime = Date.now();
-          // Grab DOM elements early for use in event handlers.
+          // Grab DOM elements for use in event handlers.
           const transcriptionElement = document.getElementById('transcription'),
                 languageSelect = document.getElementById('language-select'),
                 stopButton = document.getElementById('stop'),
