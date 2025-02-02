@@ -123,8 +123,8 @@
 
   <script>
     // Check if the browser supports the required APIs
-    if (!window.MediaRecorder || !(window.webkitSpeechRecognition || window.SpeechRecognition)) { 
-      alert("Your browser does not support the required APIs for audio recording and transcription."); 
+    if (!window.MediaRecorder || !(window.webkitSpeechRecognition || window.SpeechRecognition)) {
+      alert("Your browser does not support the required APIs for audio recording and transcription.");
     } else {
       navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         // Use a single timestamp for the entire recording session.
@@ -155,8 +155,8 @@
               fileExtension = mimeTypeToExtension[mimeType] || 'webm';
 
         // Set up MediaRecorder for audio recording.
-        const mediaRecorder = new MediaRecorder(stream, {mimeType, audioBitsPerSecond:32000}), audioChunks = [];
-        mediaRecorder.ondataavailable = event => { if(event.data.size > 0) audioChunks.push(event.data); };
+        const mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 32000 }), audioChunks = [];
+        mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
         mediaRecorder.onstop = () => {
           // Construct the audio file name using the custom title (if provided).
           const customTitle = customFilenameInput.value.trim(),
@@ -173,9 +173,25 @@
               recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = navigator.language || 'en-US';
-        languageSelect.value = recognition.lang;
 
+        function getSupportedLanguage(lang) {
+          // Get the list of supported languages from the dropdown.
+          const availableLanguages = Array.from(languageSelect.options).map(option => option.value);
+          // If the language exactly matches one of the options, return it.
+          if (availableLanguages.includes(lang)) {
+            return lang;
+          }
+          // Otherwise, try to match based on the two-letter code (e.g. "de" -> "de-DE")
+          const twoLetter = lang.split('-')[0];
+          const match = availableLanguages.find(l => l.startsWith(twoLetter));
+          return match || 'en-US';
+        }
+
+        const browserLang = navigator.language || 'en-US';
+        const selectedLang = getSupportedLanguage(browserLang);
+        recognition.lang = selectedLang;
+        languageSelect.value = selectedLang;
+        
         let isRecording = true, interimStartTime = null; // Tracks when an interim transcript begins.
         const interimSpanId = 'interim-transcript';
 
@@ -210,36 +226,36 @@
           if (interimTranscript) {
             removeInterimTranscript();
             const interimSpan = document.createElement('span');
-            interimSpan.id = interimSpanId; 
+            interimSpan.id = interimSpanId;
             interimSpan.style.opacity = '0.5';
             interimSpan.textContent = interimTranscript;
             transcriptionElement.appendChild(interimSpan);
           }
         };
 
-        recognition.onerror = event => { 
-          console.error('Speech recognition error:', event.error); 
+        recognition.onerror = event => {
+          console.error('Speech recognition error:', event.error);
           // Attempt to restart if still recording.
-          if (isRecording) { 
-            recognition.stop(); 
-            recognition.start(); 
-          } 
+          if (isRecording) {
+            recognition.stop();
+            recognition.start();
+          }
         };
         recognition.onend = () => { if (isRecording) recognition.start(); };
         recognition.start();
 
         // Update language if the user selects a new option.
-        languageSelect.addEventListener('change', () => { 
-          recognition.stop(); 
-          recognition.lang = languageSelect.value; 
-          if (isRecording) recognition.start(); 
+        languageSelect.addEventListener('change', () => {
+          recognition.stop();
+          recognition.lang = languageSelect.value;
+          if (isRecording) recognition.start();
         });
 
         // When the user clicks the stop button, stop both audio and transcription.
         stopButton.addEventListener('click', () => {
-          mediaRecorder.stop(); 
-          recognition.stop(); 
-          stopButton.style.display = 'none'; 
+          mediaRecorder.stop();
+          recognition.stop();
+          stopButton.style.display = 'none';
           isRecording = false;
 
           // Remove any lingering interim transcript.
@@ -255,61 +271,61 @@
         });
 
         // Warn the user if they try to leave while a recording is in progress.
-        window.addEventListener('beforeunload', event => { 
+        window.addEventListener('beforeunload', event => {
           if (isRecording) {
-            event.preventDefault(); 
-            event.returnValue = 'A recording is still in progress. Are you sure you want to leave?'; 
-          } 
+            event.preventDefault();
+            event.returnValue = 'A recording is still in progress. Are you sure you want to leave?';
+          }
         });
-      }).catch(error => { 
-        console.error('Error accessing microphone:', error); 
-        alert("Microphone access denied or unavailable."); 
+      }).catch(error => {
+        console.error('Error accessing microphone:', error);
+        alert("Microphone access denied or unavailable.");
       });
     }
 
     // Utility: Trigger download of a blob with a given file name.
-    function downloadBlob(blob, fileName) { 
-      const a = document.createElement('a'); 
-      a.href = URL.createObjectURL(blob); 
-      a.download = fileName; 
-      a.click(); 
-      URL.revokeObjectURL(a.href); 
+    function downloadBlob(blob, fileName) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
     }
 
     // Utility: Remove the interim transcript span if it exists.
-    function removeInterimTranscript() { 
-      const interim = document.getElementById('interim-transcript'); 
-      if (interim) interim.remove(); 
+    function removeInterimTranscript() {
+      const interim = document.getElementById('interim-transcript');
+      if (interim) interim.remove();
     }
 
     // Utility: Generate a date/time prefix for file names.
-    function getDateTimePrefix(time) { 
-      const date = new Date(time), 
-        year = date.getFullYear(), 
-        month = String(date.getMonth() + 1).padStart(2, '0'), 
-        day = String(date.getDate()).padStart(2, '0'), 
-        hours = String(date.getHours()).padStart(2, '0'), 
-        minutes = String(date.getMinutes()).padStart(2, '0'), 
-        seconds = String(date.getSeconds()).padStart(2, '0'); 
-      return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`; 
+    function getDateTimePrefix(time) {
+      const date = new Date(time),
+        year = date.getFullYear(),
+        month = String(date.getMonth() + 1).padStart(2, '0'),
+        day = String(date.getDate()).padStart(2, '0'),
+        hours = String(date.getHours()).padStart(2, '0'),
+        minutes = String(date.getMinutes()).padStart(2, '0'),
+        seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
     }
 
     // Utility: Convert HTML content to plain text while preserving line breaks.
-    function htmlToPlainText(html) { 
-      const tempDiv = document.createElement('div'); 
-      tempDiv.innerHTML = html; 
-      function traverse(node) { 
-        let text = ''; 
-        node.childNodes.forEach(child => { 
-          if (child.nodeType === Node.TEXT_NODE) text += child.textContent; 
-          else if (child.nodeType === Node.ELEMENT_NODE) { 
-            if (['BR','DIV','P'].includes(child.tagName)) text += '\n';
-            text += traverse(child); 
-          } 
-        }); 
-        return text; 
-      } 
-      return traverse(tempDiv).replace(/\n\s*\n/g, '\n\n').trim(); 
+    function htmlToPlainText(html) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      function traverse(node) {
+        let text = '';
+        node.childNodes.forEach(child => {
+          if (child.nodeType === Node.TEXT_NODE) text += child.textContent;
+          else if (child.nodeType === Node.ELEMENT_NODE) {
+            if (['BR', 'DIV', 'P'].includes(child.tagName)) text += '\n';
+            text += traverse(child);
+          }
+        });
+        return text;
+      }
+      return traverse(tempDiv).replace(/\n\s*\n/g, '\n\n').trim();
     }
 
     // Utility: Pad single-digit numbers with a leading zero.
