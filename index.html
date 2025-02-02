@@ -4,29 +4,30 @@
 <head>
   <meta charset="UTF-8">
   <title>Audio Recorder</title>
-  <!-- This meta tag ensures proper scaling on mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Base styles */
+    /* Base styles for dark theme */
     body {
       font-family: Consolas, monospace;
       margin: 0;
       padding: 10px;
-      background: #f7f7f7;
+      background: #121212;
+      color: #e0e0e0;
     }
 
     .container {
       max-width: 800px;
       margin: 0 auto;
-      background: #fff;
+      background: #1e1e1e;
       padding: 15px;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     }
 
     h3 {
       margin: 10px 0;
       font-size: 1.2rem;
+      color: #ffffff;
     }
 
     /* Controls layout */
@@ -48,6 +49,10 @@
     select {
       padding: 6px 8px;
       font-size: 1rem;
+      background: #333;
+      border: 1px solid #555;
+      border-radius: 4px;
+      color: #e0e0e0;
     }
 
     button {
@@ -68,12 +73,13 @@
     #transcription-container {
       margin-top: 15px;
       padding: 10px;
-      border: 1px solid #ccc;
+      border: 1px solid #444;
       border-radius: 4px;
       white-space: pre-wrap;
       font-family: Consolas, monospace;
       font-size: 0.9rem;
-      background: #fafafa;
+      background: #2c2c2c;
+      color: #e0e0e0;
     }
 
     /* Responsive adjustments for small screens */
@@ -327,7 +333,7 @@
 
     // Utility: Pad single-digit numbers with a leading zero.
     function padZero(num) { return num < 10 ? '0' + num : num; }
-
   </script>
 </body>
+
 </html>
