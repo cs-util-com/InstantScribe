@@ -193,9 +193,7 @@
 
         // If MP3 is natively supported, use MediaRecorder
         if (isMP3Supported) {
-          // Speech-optimized settings
-          const speechBitrate = 48000; // 48kbps bitrate - good for speech quality with smaller file size
-          mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: speechBitrate });
+          mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 });
           mediaRecorder.ondataavailable = event => { 
             if (event.data.size > 0) audioChunks.push(event.data); 
           };
@@ -212,13 +210,12 @@
           const sourceNode = audioContext.createMediaStreamSource(stream);
           
           // Create a ScriptProcessorNode to process audio
-          // Smaller buffer size (8192) for more efficient encoding
-          audioProcessor = audioContext.createScriptProcessor(8192, 1, 1);
+          audioProcessor = audioContext.createScriptProcessor(16384, 1, 1);
           let mp3Data = [];
           
-          // Initialize MP3 encoder with speech-optimized settings
+          // Initialize MP3 encoder with proper sample rate
           mp3EncoderSampleRate = audioContext.sampleRate;
-          mp3Encoder = new lamejs.Mp3Encoder(1, mp3EncoderSampleRate, speechBitrate / 1000);
+          mp3Encoder = new lamejs.Mp3Encoder(1, mp3EncoderSampleRate, 128);
           
           audioProcessor.onaudioprocess = (e) => {
             if (!isRecording) return;
@@ -233,7 +230,7 @@
               sampleBuffer[i] = Math.max(-32768, Math.min(32767, samples[i] * 32768));
             }
             
-            // Encode to MP3 with speech-optimized settings
+            // Encode to MP3
             const mp3buf = mp3Encoder.encodeBuffer(sampleBuffer);
             if (mp3buf.length > 0) {
               mp3Data.push(mp3buf);
