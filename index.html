@@ -95,6 +95,21 @@
         width: 100%;
       }
     }
+
+    /* Notification banner */
+    .notification {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 5px;
+      z-index: 1000;
+      text-align: center;
+      transition: opacity 0.5s;
+    }
   </style>
 </head>
 
@@ -126,10 +141,29 @@
   </div>
 
   <script>
+    // Global variable to track recording state
+    let isRecording = false;
+    let exitWarningEnabled = false;
+
     // Check if the browser supports the required APIs
     if (!window.MediaRecorder || !(window.webkitSpeechRecognition || window.SpeechRecognition)) {
       alert("Your browser does not support the required APIs for audio recording and transcription.");
     } else {
+      // Show notification to encourage user interaction
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.innerHTML = 'Click anywhere to enable exit warning.';
+      document.body.appendChild(notification);
+      
+      // Set up one-time click handler to enable exit warnings
+      document.addEventListener('click', function enableExitWarning() {
+        exitWarningEnabled = true;
+        document.removeEventListener('click', enableExitWarning);
+        // Fade out and remove notification
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 500);
+      }, { once: true });
+
       navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         // Use a single timestamp for the entire recording session.
         const recordingStartTime = Date.now();
@@ -196,7 +230,9 @@
         recognition.lang = selectedLang;
         languageSelect.value = selectedLang;
         
-        let isRecording = true, interimStartTime = null; // Tracks when an interim transcript begins.
+        // Set isRecording to true - now in global scope
+        isRecording = true;
+        let interimStartTime = null; // Tracks when an interim transcript begins.
         const interimSpanId = 'interim-transcript';
 
         recognition.onresult = event => {
@@ -260,7 +296,7 @@
           mediaRecorder.stop();
           recognition.stop();
           stopButton.style.display = 'none';
-          isRecording = false;
+          isRecording = false; // Now updates the global variable
 
           // Remove any lingering interim transcript.
           removeInterimTranscript();
@@ -327,15 +363,14 @@
     // Utility: Pad single-digit numbers with a leading zero.
     function padZero(num) { return num < 10 ? '0' + num : num; }
 
-    // Updated beforeunload handler to reliably show warning
+    // Updated beforeunload handler that works with the global isRecording variable
     window.addEventListener('beforeunload', event => {
-      if (isRecording) {
+      if (isRecording && exitWarningEnabled) {
         // Standard way to show a confirmation dialog before leaving the page
-        // The custom message may not be shown in modern browsers (they use their own generic message)
         const message = 'A recording is still in progress. Are you sure you want to leave?';
-        event.preventDefault(); // Required for some browsers
-        event.returnValue = message; // Required for Chrome
-        return message; // Required for older browsers
+        event.preventDefault();
+        event.returnValue = message; 
+        return message;
       }
     });
   </script>
