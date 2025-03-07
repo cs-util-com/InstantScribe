@@ -334,6 +334,18 @@
 
     // Utility: Pad single-digit numbers with a leading zero.
     function padZero(num) { return num < 10 ? '0' + num : num; }
+
+    // Updated beforeunload handler to reliably show warning
+    window.addEventListener('beforeunload', event => {
+      if (isRecording) {
+        // Standard way to show a confirmation dialog before leaving the page
+        // The custom message may not be shown in modern browsers (they use their own generic message)
+        const message = 'A recording is still in progress. Are you sure you want to leave?';
+        event.preventDefault(); // Required for some browsers
+        event.returnValue = message; // Required for Chrome
+        return message; // Required for older browsers
+      }
+    });
   </script>
 </body>
 
