@@ -273,14 +273,6 @@
                 textBlob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
           downloadBlob(textBlob, transcriptFileName);
         });
-
-        // Warn the user if they try to leave while a recording is in progress.
-        window.addEventListener('beforeunload', event => {
-          if (isRecording) {
-            event.preventDefault();
-            event.returnValue = 'A recording is still in progress. Are you sure you want to leave?';
-          }
-        });
       }).catch(error => {
         console.error('Error accessing microphone:', error);
         alert("Microphone access denied or unavailable.");
