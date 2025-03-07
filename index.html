@@ -6,6 +6,8 @@
   <title>Audio Recorder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ff0000'/%3E%3C/svg%3E" type="image/svg+xml">
+  <!-- Add lamejs library -->
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
   <style>
     /* Base styles for dark theme */
     body {
@@ -144,6 +146,8 @@
     // Global variable to track recording state
     let isRecording = false;
     let exitWarningEnabled = false;
+    let mp3Encoder = null;
+    let mp3EncoderSampleRate = 44100; // Default sample rate for MP3 encoder
 
     // Check if the browser supports the required APIs
     if (!window.MediaRecorder || !(window.webkitSpeechRecognition || window.SpeechRecognition)) {
@@ -173,38 +177,105 @@
               stopButton = document.getElementById('stop'),
               customFilenameInput = document.getElementById('custom-filename');
 
-        // Determine a supported audio MIME type.
-        const mimeTypes = ['audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/webm'],
-              mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || null;
+        // Determine if MP3 recording is supported natively
+        const isMP3Supported = MediaRecorder.isTypeSupported('audio/mpeg') || MediaRecorder.isTypeSupported('audio/mp3');
+        const mimeType = isMP3Supported ? 
+                         (MediaRecorder.isTypeSupported('audio/mpeg') ? 'audio/mpeg' : 'audio/mp3') : 
+                         ['audio/ogg', 'audio/mp4', 'audio/webm'].find(type => MediaRecorder.isTypeSupported(type)) || '';
+        
+        // Always use MP3 as the file extension, even if we'll be encoding manually
+        const fileExtension = 'mp3';
+        
+        let audioProcessor = null;
+        let audioContext = null;
+        let audioChunks = [];
+        let mediaRecorder = null;
 
-        if (!mimeType) {
-          alert("Your browser does not support MP3, OGG, MP4, or WebM audio recording.");
-          return;
+        // If MP3 is natively supported, use MediaRecorder
+        if (isMP3Supported) {
+          mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 });
+          mediaRecorder.ondataavailable = event => { 
+            if (event.data.size > 0) audioChunks.push(event.data); 
+          };
+          mediaRecorder.onstop = () => {
+            const customTitle = customFilenameInput.value.trim(),
+                  audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`,
+                  audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+            downloadBlob(audioBlob, audioFileName);
+          };
+        } 
+        // Otherwise use Web Audio API with lamejs
+        else {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const sourceNode = audioContext.createMediaStreamSource(stream);
+          
+          // Create a ScriptProcessorNode to process audio
+          audioProcessor = audioContext.createScriptProcessor(16384, 1, 1);
+          let mp3Data = [];
+          
+          // Initialize MP3 encoder with proper sample rate
+          mp3EncoderSampleRate = audioContext.sampleRate;
+          mp3Encoder = new lamejs.Mp3Encoder(1, mp3EncoderSampleRate, 128);
+          
+          audioProcessor.onaudioprocess = (e) => {
+            if (!isRecording) return;
+            
+            // Get audio data from input channel
+            const samples = e.inputBuffer.getChannelData(0);
+            
+            // Convert float32 to int16
+            const sampleBuffer = new Int16Array(samples.length);
+            for (let i = 0; i < samples.length; i++) {
+              // Scale to int16 range and clamp to avoid overflow
+              sampleBuffer[i] = Math.max(-32768, Math.min(32767, samples[i] * 32768));
+            }
+            
+            // Encode to MP3
+            const mp3buf = mp3Encoder.encodeBuffer(sampleBuffer);
+            if (mp3buf.length > 0) {
+              mp3Data.push(mp3buf);
+            }
+          };
+          
+          // Connect the nodes
+          sourceNode.connect(audioProcessor);
+          audioProcessor.connect(audioContext.destination);
+          
+          // Handle stop for manual MP3 encoding
+          stopButton.addEventListener('click', function stopMP3Recording() {
+            if (audioProcessor) {
+              // Finalize the MP3 encoding
+              const mp3Final = mp3Encoder.flush();
+              if (mp3Final.length > 0) {
+                mp3Data.push(mp3Final);
+              }
+              
+              // Create blob from MP3 data
+              const blob = new Blob(mp3Data, { type: 'audio/mpeg' });
+              const customTitle = customFilenameInput.value.trim();
+              const audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`;
+              
+              // Download the MP3 file
+              downloadBlob(blob, audioFileName);
+              
+              // Clean up audio processing
+              sourceNode.disconnect();
+              audioProcessor.disconnect();
+              audioProcessor = null;
+              
+              // Only remove this specific listener to avoid interfering with other stop button functionality
+              stopButton.removeEventListener('click', stopMP3Recording);
+            }
+          });
         }
 
-        // Map MIME types to file extensions.
-        const mimeTypeToExtension = {
-          'audio/mpeg': 'mp3',
-          'audio/mp3': 'mp3',
-          'audio/ogg': 'ogg',
-          'audio/mp4': 'mp4',
-          'audio/webm': 'webm'
-        },
-              fileExtension = mimeTypeToExtension[mimeType] || 'webm';
-
-        // Set up MediaRecorder for audio recording.
-        const mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 32000 }), audioChunks = [];
-        mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
-        mediaRecorder.onstop = () => {
-          // Construct the audio file name using the custom title (if provided).
-          const customTitle = customFilenameInput.value.trim(),
-                audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`,
-                audioBlob = new Blob(audioChunks, { type: mimeType });
-          downloadBlob(audioBlob, audioFileName);
-        };
-
-        // Start recording audio immediately.
-        mediaRecorder.start();
+        // Start recording using the appropriate method
+        if (isMP3Supported) {
+          mediaRecorder.start();
+        } else {
+          // For lamejs method, recording starts as soon as we set up the audio processor
+          console.log("Using lamejs for MP3 encoding (native MP3 recording not supported)");
+        }
 
         // Set up Speech Recognition for live transcription.
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition,
@@ -293,7 +364,11 @@
 
         // When the user clicks the stop button, stop both audio and transcription.
         stopButton.addEventListener('click', () => {
-          mediaRecorder.stop();
+          // For MediaRecorder method
+          if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+          }
+          
           recognition.stop();
           stopButton.style.display = 'none';
           isRecording = false; // Now updates the global variable
