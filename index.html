@@ -180,22 +180,28 @@
           <option value="zh-CN">Chinese (Simplified)</option>
         </select>
       </div>
-      <button id="summarize">Summarize Text</button>
-    </div>
-
-    <!-- API Key Section -->
-    <div class="api-key-section">
-      <div class="api-key-toggle">⚙️ OpenAI API Settings (click to expand)</div>
-      <div class="api-key-input">
-        <input type="password" id="api-key" placeholder="Enter your OpenAI API key (sk-...)">
-        <button id="save-api-key">Save</button>
-      </div>
     </div>
 
     <h3>Transcription:</h3>
     <div id="transcription-container">
       <!-- The transcription element is contenteditable (editable by the user) -->
       <div id="transcription" contenteditable="true"></div>
+    </div>
+
+    <!-- Moved summarize section to after transcription -->
+    <div class="summarize-section" style="margin-top: 20px; border-top: 1px solid #444; padding-top: 15px;">
+      <div class="controls">
+        <button id="summarize">Summarize Text</button>
+      </div>
+      
+      <!-- API Key Section -->
+      <div class="api-key-section">
+        <div class="api-key-toggle">⚙️ OpenAI API Settings (click to expand)</div>
+        <div class="api-key-input">
+          <input type="password" id="api-key" placeholder="Enter your OpenAI API key (sk-...)">
+          <button id="save-api-key">Save</button>
+        </div>
+      </div>
     </div>
 
     <!-- Summary Section -->
