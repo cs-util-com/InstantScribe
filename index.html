@@ -517,6 +517,18 @@
                   highQualityBlob = new Blob([highQualityText], { type: 'text/plain;charset=utf-8' });
             downloadBlob(highQualityBlob, highQualityFileName);
           }
+          
+          // Also download summary if available
+          const summaryContent = document.getElementById('summary-content');
+          if (summaryContent && 
+              summaryContent.textContent.trim() && 
+              !summaryContent.textContent.includes('Generating summary...') &&
+              !summaryContent.textContent.includes('Error generating summary:')) {
+            const summaryText = summaryContent.textContent,
+                  summaryFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} summary.txt`,
+                  summaryBlob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
+            downloadBlob(summaryBlob, summaryFileName);
+          }
         });
       }).catch(error => {
         console.error('Error accessing microphone:', error);
