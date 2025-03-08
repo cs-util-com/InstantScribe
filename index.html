@@ -10,7 +10,9 @@
   <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
   <!-- Import OpenAI library -->
   <script type="module">
-    import OpenAI from 'https://esm.sh/openai@4.86.2?target=es2020';
+    // Using a semver range with tilde (~) to get automatic patch updates but not minor version changes
+    // This balances stability with security fixes and bug fixes
+    import OpenAI from 'https://esm.sh/openai@~4.86.2?target=es2020';
     window.OpenAI = OpenAI;
   </script>
   <style>
