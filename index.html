@@ -183,18 +183,19 @@
           dangerouslyAllowBrowser: true,
         });
 
-        // Use improved prompt that considers both transcriptions
-        let prompt;
+        let prompt = `As a professional transcriber and summarizer, please analyze the following audio transcriptions and produce both a clear, concise summary that captures the key topics, main points, and any critical details.
+        First, identify the main ideas and list the top 3–5 key takeaways. Then, compose a structured paragraph that integrates these points in a logical, easy-to-read format.
+        After these sections also write down an accurate, high-quality transcription (that still lists the timestamps if available).
+        For all your produced work, use the same language as the original transcription (e.g. if transcription is German, your result should be in German).
+         \n\n`;
         if (highQualityText.trim()) {
-          prompt = `As a professional summarizer, please analyze the following transcriptions and produce a clear, concise summary that captures the key topics, main points, and critical details. Automatically detect the language of the transcriptions and provide the summary in that same language (e.g., if the transcriptions are in German, produce the summary in German; if in English, produce the summary in English). 
-
-When two transcription versions are provided, prioritize the high-quality version for summarization while cross-checking the low-quality version to ensure no essential details are missed. First, identify the main ideas and list the top 3–5 key takeaways. Then, compose a structured paragraph that integrates these points in a logical, easy-to-read format.
-Low Quality Transcription:
-\n\n${lowQualityText}
-High Quality Transcription:
-\n\n${highQualityText}`;
+          // Use improved prompt that considers both transcriptions
+          prompt += `Two transcription versions are provided, prioritize the high-quality version for summarization while cross-checking the low-quality version for error correction etc. 
+          Low Quality Transcription: \n\n${lowQualityText}
+          High Quality Transcription: \n\n${highQualityText}`;
         } else {
-          prompt = `As a professional summarizer, please analyze the following transcription and produce a clear, concise summary that captures the key topics, main points, and any critical details. First, identify the main ideas and list the top 3–5 key takeaways. Then, compose a structured paragraph that integrates these points in a logical, easy-to-read format. Transcription: \n\n${lowQualityText}`;
+          // Use only the low-quality transcription
+          prompt += `Transcription: \n\n${lowQualityText}`;
         }
 
         // Call the API
