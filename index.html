@@ -45,6 +45,19 @@
       <div id="transcription" contenteditable="true"></div>
     </div>
 
+    <!-- Add new button for high-quality transcription -->
+    <div class="mt-3 flex justify-end">
+      <button id="whisper-transcribe" class="py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700">Generate High-Quality Transcript</button>
+    </div>
+
+    <!-- Add high-quality transcript container -->
+    <div id="high-quality-container" class="hidden mt-4">
+      <h3 class="my-2.5 text-lg text-white">High-Quality Transcription:</h3>
+      <div class="p-2.5 border border-green-600 rounded whitespace-pre-wrap font-mono text-sm bg-gray-700 text-gray-200">
+        <div id="high-quality-transcription" contenteditable="true"></div>
+      </div>
+    </div>
+
     <!-- Moved summarize section to after transcription -->
     <div class="mt-5 border-t border-gray-600 pt-4">
       <div class="flex flex-wrap items-center gap-2.5 mb-4">
@@ -74,6 +87,8 @@
     let exitWarningEnabled = false;
     let mp3Encoder = null;
     let apiKey = localStorage.getItem('openai_api_key') || '';
+    let audioChunks = []; // For native MediaRecorder
+    let mp3Data = []; // For lamejs encoding
 
     // Initialize API key section
     document.addEventListener('DOMContentLoaded', () => {
@@ -82,6 +97,7 @@
       const apiKeyField = document.getElementById('api-key');
       const saveApiKeyBtn = document.getElementById('save-api-key');
       const summarizeBtn = document.getElementById('summarize');
+      const whisperBtn = document.getElementById('whisper-transcribe');
       
       // Set the saved API key if available
       if (apiKey) {
@@ -101,10 +117,28 @@
         showNotification('API key saved');
       });
 
+      // Whisper high-quality transcription button handler
+      whisperBtn.addEventListener('click', async () => {
+        if (!apiKey) {
+          showNotification('Please provide an OpenAI API key first');
+          apiKeyInput.classList.remove('hidden');
+          return;
+        }
+
+        if (audioChunks.length === 0 && mp3Data.length === 0) {
+          showNotification('No audio recorded yet');
+          return;
+        }
+
+        await generateHighQualityTranscription();
+      });
+
       // Summarize button event handler
       summarizeBtn.addEventListener('click', async () => {
         const transcriptionText = document.getElementById('transcription').textContent;
-        if (!transcriptionText.trim()) {
+        const highQualityText = document.getElementById('high-quality-transcription').textContent;
+        
+        if (!transcriptionText.trim() && !highQualityText.trim()) {
           showNotification('No transcription text to summarize');
           return;
         }
@@ -115,7 +149,7 @@
           return;
         }
 
-        await summarizeText(transcriptionText);
+        await summarizeText(transcriptionText, highQualityText);
       });
     });
 
@@ -132,8 +166,8 @@
       }, duration);
     }
 
-    // Function to summarize text using OpenAI API
-    async function summarizeText(text) {
+    // Updated function to summarize text using OpenAI API
+    async function summarizeText(lowQualityText, highQualityText = '') {
       const summaryHeading = document.getElementById('summary-heading');
       const summaryContainer = document.getElementById('summary-container');
       const summaryContent = document.getElementById('summary-content');
@@ -149,13 +183,27 @@
           dangerouslyAllowBrowser: true,
         });
 
+        // Use improved prompt that considers both transcriptions
+        let prompt;
+        if (highQualityText.trim()) {
+          prompt = `As a professional summarizer, please analyze the following transcriptions and produce a clear, concise summary that captures the key topics, main points, and critical details. Automatically detect the language of the transcriptions and provide the summary in that same language (e.g., if the transcriptions are in German, produce the summary in German; if in English, produce the summary in English). 
+
+When two transcription versions are provided, prioritize the high-quality version for summarization while cross-checking the low-quality version to ensure no essential details are missed. First, identify the main ideas and list the top 3–5 key takeaways. Then, compose a structured paragraph that integrates these points in a logical, easy-to-read format.
+Low Quality Transcription:
+\n\n${lowQualityText}
+High Quality Transcription:
+\n\n${highQualityText}`;
+        } else {
+          prompt = `As a professional summarizer, please analyze the following transcription and produce a clear, concise summary that captures the key topics, main points, and any critical details. First, identify the main ideas and list the top 3–5 key takeaways. Then, compose a structured paragraph that integrates these points in a logical, easy-to-read format. Transcription: \n\n${lowQualityText}`;
+        }
+
         // Call the API
         const response = await client.chat.completions.create({
           model: 'gpt-4o-mini', // Using a less expensive model for summaries
           messages: [
             { 
               role: 'user', 
-              content: `As a professional summarizer, please analyze the following transcription and produce a clear, concise summary that captures the key topics, main points, and any critical details. First, identify the main ideas and list the top 3–5 key takeaways. Then, compose a structured paragraph that integrates these points in a logical, easy-to-read format. Transcription: \n\n${text}` 
+              content: prompt
             }
           ],
           max_tokens: 500
@@ -167,6 +215,57 @@
       } catch (error) {
         console.error('Error generating summary:', error);
         summaryContent.textContent = `Error generating summary: ${error.message}`;
+      }
+    }
+
+    // Function to generate high-quality transcription using Whisper API
+    async function generateHighQualityTranscription() {
+      const highQualityContainer = document.getElementById('high-quality-container');
+      const highQualityTranscription = document.getElementById('high-quality-transcription');
+      
+      // Show container and loading message
+      highQualityContainer.classList.remove('hidden');
+      highQualityTranscription.textContent = 'Generating high-quality transcription...';
+      
+      try {
+        // Create a blob from audio data, using the appropriate source
+        let audioBlob;
+        if (audioChunks.length > 0) {
+          // Native MediaRecorder method
+          audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+        } else if (mp3Data.length > 0) {
+          // lamejs method
+          audioBlob = new Blob(mp3Data, { type: 'audio/mpeg' });
+        } else {
+          throw new Error('No audio data available');
+        }
+        
+        // Convert the Blob to a proper File object, which OpenAI API requires
+        const audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
+        
+        // Create OpenAI client
+        const client = new window.OpenAI({
+          apiKey: apiKey,
+          dangerouslyAllowBrowser: true,
+        });
+        
+        // Get selected language
+        const languageSelect = document.getElementById('language-select');
+        const language = languageSelect.value.split('-')[0]; // Get two-letter language code
+        
+        // Call Whisper API with File object instead of Blob
+        const response = await client.audio.transcriptions.create({
+          file: audioFile,
+          model: 'whisper-1',
+          language: language
+        });
+        
+        // Display the transcription
+        highQualityTranscription.textContent = response.text;
+        showNotification('High-quality transcription completed');
+      } catch (error) {
+        console.error('Error generating high-quality transcription:', error);
+        highQualityTranscription.textContent = `Error: ${error.message}`;
       }
     }
 
@@ -209,8 +308,12 @@
         
         let audioProcessor = null;
         let audioContext = null;
-        let audioChunks = [];
         let mediaRecorder = null;
+
+        // Make audioChunks global and reset it
+        audioChunks = [];
+        // Also reset mp3Data
+        mp3Data = [];
 
         // If MP3 is natively supported, use MediaRecorder
         if (isMP3Supported) {
@@ -232,7 +335,6 @@
           
           // Create a ScriptProcessorNode to process audio
           audioProcessor = audioContext.createScriptProcessor(16384, 1, 1);
-          let mp3Data = [];
           
           // Initialize MP3 encoder with proper sample rate
           mp3Encoder = new lamejs.Mp3Encoder(1, audioContext.sampleRate, 64);
@@ -403,6 +505,17 @@
                 transcriptFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio transcript.txt`,
                 textBlob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
           downloadBlob(textBlob, transcriptFileName);
+          
+          // Also download high-quality transcription if available
+          const highQualityTranscription = document.getElementById('high-quality-transcription');
+          if (highQualityTranscription && highQualityTranscription.textContent.trim() && 
+              !highQualityTranscription.textContent.includes('Generating high-quality') && 
+              !highQualityTranscription.textContent.includes('Error:')) {
+            const highQualityText = highQualityTranscription.textContent,
+                  highQualityFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} high quality transcript.txt`,
+                  highQualityBlob = new Blob([highQualityText], { type: 'text/plain;charset=utf-8' });
+            downloadBlob(highQualityBlob, highQualityFileName);
+          }
         });
       }).catch(error => {
         console.error('Error accessing microphone:', error);
