@@ -15,163 +15,18 @@
     import OpenAI from 'https://esm.sh/openai@~4.86.2?target=es2020';
     window.OpenAI = OpenAI;
   </script>
-  <style>
-    /* Base styles for dark theme */
-    body {
-      font-family: Consolas, monospace;
-      margin: 0;
-      padding: 10px;
-      background: #121212;
-      color: #e0e0e0;
-    }
-
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: #1e1e1e;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-    }
-
-    h3 {
-      margin: 10px 0;
-      font-size: 1.2rem;
-      color: #ffffff;
-    }
-
-    /* Controls layout */
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    .control-group {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    input[type="text"],
-    select {
-      padding: 6px 8px;
-      font-size: 1rem;
-      background: #333;
-      border: 1px solid #555;
-      border-radius: 4px;
-      color: #e0e0e0;
-    }
-
-    button {
-      padding: 8px 12px;
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    /* Transcription box */
-    #transcription-container {
-      margin-top: 15px;
-      padding: 10px;
-      border: 1px solid #444;
-      border-radius: 4px;
-      white-space: pre-wrap;
-      font-family: Consolas, monospace;
-      font-size: 0.9rem;
-      background: #2c2c2c;
-      color: #e0e0e0;
-    }
-
-    /* Responsive adjustments for small screens */
-    @media (max-width: 600px) {
-      .controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .control-group,
-      button {
-        width: 100%;
-      }
-    }
-
-    /* Notification banner */
-    .notification {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 10px 15px;
-      border-radius: 5px;
-      z-index: 1000;
-      text-align: center;
-      transition: opacity 0.5s;
-    }
-
-    /* API Key section */
-    .api-key-section {
-      margin: 10px 0;
-      padding: 10px;
-      border: 1px dashed #555;
-      border-radius: 4px;
-      background: #222;
-    }
-
-    .api-key-toggle {
-      cursor: pointer;
-      color: #007bff;
-      user-select: none;
-    }
-
-    .api-key-input {
-      display: none; /* Hidden by default */
-      margin-top: 8px;
-    }
-
-    .api-key-input input {
-      width: calc(100% - 125px);
-      margin-right: 10px;
-    }
-
-    /* Summary section */
-    .summary-container {
-      margin-top: 15px;
-      padding: 10px;
-      border: 1px solid #444;
-      border-radius: 4px;
-      background: #2c2c2c;
-      display: none; /* Hidden until there's a summary */
-    }
-
-    .summary-content {
-      white-space: pre-wrap;
-      font-family: Consolas, monospace;
-      font-size: 0.9rem;
-      color: #a0e0a0;
-    }
-  </style>
+  <!-- Added Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
-  <div class="container">
-    <div class="controls">
-      <input type="text" id="custom-filename" placeholder="File title...">
-      <button id="stop">Save Recording</button>
-      <div class="control-group">
+<body class="font-mono m-0 p-2.5 bg-gray-900 text-gray-200">
+  <div class="max-w-3xl mx-auto bg-gray-800 p-4 rounded-lg shadow-md">
+    <div class="flex flex-wrap items-center gap-2.5 mb-4">
+      <input type="text" id="custom-filename" placeholder="File title..." class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
+      <button id="stop" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Save Recording</button>
+      <div class="flex items-center gap-1.5">
         <label for="language-select">Transcribe in </label>
-        <select id="language-select">
+        <select id="language-select" class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
           <option value="en-US">English (US)</option>
           <option value="en-GB">English (UK)</option>
           <option value="de-DE">German</option>
@@ -184,32 +39,32 @@
       </div>
     </div>
 
-    <h3>Transcription:</h3>
-    <div id="transcription-container">
+    <h3 class="my-2.5 text-lg text-white">Transcription:</h3>
+    <div id="transcription-container" class="mt-4 p-2.5 border border-gray-600 rounded whitespace-pre-wrap font-mono text-sm bg-gray-700 text-gray-200">
       <!-- The transcription element is contenteditable (editable by the user) -->
       <div id="transcription" contenteditable="true"></div>
     </div>
 
     <!-- Moved summarize section to after transcription -->
-    <div class="summarize-section" style="margin-top: 20px; border-top: 1px solid #444; padding-top: 15px;">
-      <div class="controls">
-        <button id="summarize">Summarize Text</button>
+    <div class="mt-5 border-t border-gray-600 pt-4">
+      <div class="flex flex-wrap items-center gap-2.5 mb-4">
+        <button id="summarize" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Summarize Text</button>
       </div>
       
       <!-- API Key Section -->
-      <div class="api-key-section">
-        <div class="api-key-toggle">⚙️ OpenAI API Settings (click to expand)</div>
-        <div class="api-key-input">
-          <input type="password" id="api-key" placeholder="Enter your OpenAI API key (sk-...)">
-          <button id="save-api-key">Save</button>
+      <div class="my-2.5 p-2.5 border border-dashed border-gray-500 rounded bg-gray-800">
+        <div class="api-key-toggle cursor-pointer text-blue-500 select-none">⚙️ OpenAI API Settings (click to expand)</div>
+        <div class="api-key-input hidden mt-2">
+          <input type="password" id="api-key" placeholder="Enter your OpenAI API key (sk-...)" class="w-[calc(100%-125px)] mr-2.5 p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
+          <button id="save-api-key" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Save</button>
         </div>
       </div>
     </div>
 
     <!-- Summary Section -->
-    <h3 id="summary-heading" style="display:none;">Summary:</h3>
-    <div id="summary-container" class="summary-container">
-      <div id="summary-content" class="summary-content"></div>
+    <h3 id="summary-heading" class="hidden my-2.5 text-lg text-white">Summary:</h3>
+    <div id="summary-container" class="hidden mt-4 p-2.5 border border-gray-600 rounded bg-gray-700">
+      <div id="summary-content" class="whitespace-pre-wrap font-mono text-sm text-green-300"></div>
     </div>
   </div>
 
@@ -235,14 +90,14 @@
 
       // Toggle API key input visibility
       apiKeyToggle.addEventListener('click', () => {
-        apiKeyInput.style.display = apiKeyInput.style.display === 'none' ? 'block' : 'none';
+        apiKeyInput.classList.toggle('hidden');
       });
 
       // Save API key to localStorage
       saveApiKeyBtn.addEventListener('click', () => {
         apiKey = apiKeyField.value.trim();
         localStorage.setItem('openai_api_key', apiKey);
-        apiKeyInput.style.display = 'none';
+        apiKeyInput.classList.add('hidden');
         showNotification('API key saved');
       });
 
@@ -256,7 +111,7 @@
 
         if (!apiKey) {
           showNotification('Please provide an OpenAI API key first');
-          apiKeyInput.style.display = 'block';
+          apiKeyInput.classList.remove('hidden');
           return;
         }
 
@@ -267,7 +122,7 @@
     // Function to show a notification
     function showNotification(message, duration = 3000) {
       const notification = document.createElement('div');
-      notification.className = 'notification';
+      notification.className = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-black/70 text-white py-2.5 px-4 rounded-md z-50 text-center transition-opacity duration-500';
       notification.textContent = message;
       document.body.appendChild(notification);
       
@@ -283,8 +138,8 @@
       const summaryContainer = document.getElementById('summary-container');
       const summaryContent = document.getElementById('summary-content');
       
-      summaryHeading.style.display = 'block';
-      summaryContainer.style.display = 'block';
+      summaryHeading.classList.remove('hidden');
+      summaryContainer.classList.remove('hidden');
       summaryContent.textContent = 'Generating summary...';
 
       try {
@@ -325,7 +180,7 @@
     } else {
       // Show notification to encourage user interaction
       const notification = document.createElement('div');
-      notification.className = 'notification';
+      notification.className = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-black/70 text-white py-2.5 px-4 rounded-md z-50 text-center transition-opacity duration-500';
       notification.innerHTML = 'Recording & Transcription started (Click anywhere to hide message)';
       document.body.appendChild(notification);
       
