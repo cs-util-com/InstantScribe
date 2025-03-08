@@ -45,11 +45,6 @@
       <div id="transcription" contenteditable="true"></div>
     </div>
 
-    <!-- Add new button for high-quality transcription -->
-    <div class="mt-3 flex justify-end">
-      <button id="whisper-transcribe" class="py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700">Generate High-Quality Transcript</button>
-    </div>
-
     <!-- Add high-quality transcript container -->
     <div id="high-quality-container" class="hidden mt-4">
       <h3 class="my-2.5 text-lg text-white">High-Quality Transcription:</h3>
@@ -61,7 +56,8 @@
     <!-- Moved summarize section to after transcription -->
     <div class="mt-5 border-t border-gray-600 pt-4">
       <div class="flex flex-wrap items-center gap-2.5 mb-4">
-        <button id="summarize" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Summarize Text</button>
+        <button id="whisper-transcribe" class="py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700">Generate High-Quality Transcript from recorded audio</button>
+        <button id="summarize" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700 hidden">Summarize Text</button>
       </div>
       
       <!-- API Key Section -->
@@ -90,6 +86,24 @@
     let audioChunks = []; // For native MediaRecorder
     let mp3Data = []; // For lamejs encoding
 
+    // Move function out of DOMContentLoaded to make it globally accessible
+    function updateSummarizeButtonVisibility() {
+      const transcriptionEl = document.getElementById('transcription');
+      const highQualityTranscriptionEl = document.getElementById('high-quality-transcription');
+      const summarizeBtn = document.getElementById('summarize');
+      
+      if (!transcriptionEl || !summarizeBtn) return;
+      
+      const hasTranscriptionText = transcriptionEl.textContent.trim().length > 0;
+      const hasHighQualityText = highQualityTranscriptionEl ? highQualityTranscriptionEl.textContent.trim().length > 0 : false;
+      
+      if (hasTranscriptionText || hasHighQualityText) {
+        summarizeBtn.classList.remove('hidden');
+      } else {
+        summarizeBtn.classList.add('hidden');
+      }
+    }
+
     // Initialize API key section
     document.addEventListener('DOMContentLoaded', () => {
       const apiKeyToggle = document.querySelector('.api-key-toggle');
@@ -98,11 +112,20 @@
       const saveApiKeyBtn = document.getElementById('save-api-key');
       const summarizeBtn = document.getElementById('summarize');
       const whisperBtn = document.getElementById('whisper-transcribe');
+      const transcriptionEl = document.getElementById('transcription');
+      const highQualityTranscriptionEl = document.getElementById('high-quality-transcription');
       
       // Set the saved API key if available
       if (apiKey) {
         apiKeyField.value = apiKey;
       }
+
+      // Run initially
+      updateSummarizeButtonVisibility();
+      
+      // Set up listeners for content changes
+      transcriptionEl.addEventListener('input', updateSummarizeButtonVisibility);
+      highQualityTranscriptionEl.addEventListener('input', updateSummarizeButtonVisibility);
 
       // Toggle API key input visibility
       apiKeyToggle.addEventListener('click', () => {
@@ -131,6 +154,8 @@
         }
 
         await generateHighQualityTranscription();
+        // After transcription is done, check if we should show summarize button
+        updateSummarizeButtonVisibility();
       });
 
       // Summarize button event handler
@@ -454,6 +479,9 @@
               interimStartTime = null;
             }
             transcriptionElement.appendChild(document.createTextNode(finalTranscript));
+            
+            // Call the visibility update function when new text is added via speech recognition
+            updateSummarizeButtonVisibility();
           }
 
           // Always update or add the interim transcript.
