@@ -147,7 +147,6 @@
     let isRecording = false;
     let exitWarningEnabled = false;
     let mp3Encoder = null;
-    let mp3EncoderSampleRate = 44100; // Default sample rate for MP3 encoder
 
     // Check if the browser supports the required APIs
     if (!window.MediaRecorder || !(window.webkitSpeechRecognition || window.SpeechRecognition)) {
@@ -214,8 +213,7 @@
           let mp3Data = [];
           
           // Initialize MP3 encoder with proper sample rate
-          mp3EncoderSampleRate = audioContext.sampleRate;
-          mp3Encoder = new lamejs.Mp3Encoder(1, mp3EncoderSampleRate, 128);
+          mp3Encoder = new lamejs.Mp3Encoder(1, audioContext.sampleRate, 64);
           
           audioProcessor.onaudioprocess = (e) => {
             if (!isRecording) return;
