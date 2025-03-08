@@ -509,9 +509,7 @@
           
           // Also download high-quality transcription if available
           const highQualityTranscription = document.getElementById('high-quality-transcription');
-          if (highQualityTranscription && highQualityTranscription.textContent.trim() && 
-              !highQualityTranscription.textContent.includes('Generating high-quality') && 
-              !highQualityTranscription.textContent.includes('Error:')) {
+          if (highQualityTranscription && highQualityTranscription.textContent.trim()) {
             const highQualityText = highQualityTranscription.textContent,
                   highQualityFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} high quality transcript.txt`,
                   highQualityBlob = new Blob([highQualityText], { type: 'text/plain;charset=utf-8' });
@@ -521,9 +519,7 @@
           // Also download summary if available
           const summaryContent = document.getElementById('summary-content');
           if (summaryContent && 
-              summaryContent.textContent.trim() && 
-              !summaryContent.textContent.includes('Generating summary...') &&
-              !summaryContent.textContent.includes('Error generating summary:')) {
+              summaryContent.textContent.trim()) {
             const summaryText = summaryContent.textContent,
                   summaryFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} summary.txt`,
                   summaryBlob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
