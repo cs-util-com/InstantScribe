@@ -22,8 +22,11 @@
 <body class="font-mono m-0 p-2.5 bg-gray-900 text-gray-200">
   <div class="max-w-3xl mx-auto bg-gray-800 p-4 rounded-lg shadow-md">
     <div class="flex flex-wrap items-center gap-2.5 mb-4">
-      <input type="text" id="custom-filename" placeholder="File title..." class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
-      <button id="stop" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Save Recording</button>
+      <!-- Grouped input and save button in a non-wrapping flex container -->
+      <div class="flex items-center gap-2.5">
+        <input type="text" id="custom-filename" placeholder="File title..." class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
+        <button id="stop" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Save Recording</button>
+      </div>
       <div class="flex items-center gap-1.5">
         <label for="language-select">Transcribe in </label>
         <select id="language-select" class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
@@ -56,11 +59,11 @@
     <!-- Moved summarize section to after transcription -->
     <div class="mt-5 border-t border-gray-600 pt-4">
       <div class="flex flex-wrap items-center gap-2.5 mb-4">
-        <button id="whisper-transcribe" class="py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700 relative">Generate High-Quality Transcript from recorded audio
+        <button id="whisper-transcribe" class="w-full py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700 relative">Generate High-Quality Transcript from recorded audio
           <!-- Add drag-drop instruction -->
           <span class="text-xs block opacity-70">or drop audio file here</span>
         </button>
-        <button id="summarize" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700 hidden">Summarize Text</button>
+        <button id="summarize" class="w-full py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700 hidden">Summarize Text</button>
       </div>
       
       <!-- API Key Section -->
