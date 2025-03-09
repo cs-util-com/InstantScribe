@@ -388,6 +388,9 @@
       }, { once: true });
 
       navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        // Store the stream in a global variable so we can stop all tracks later
+        window.microphoneStream = stream;
+        
         // Use a single timestamp for the entire recording session.
         const recordingStartTime = Date.now();
         // Grab DOM elements for use in event handlers.
@@ -606,6 +609,11 @@
           }
           
           recognition.stop();
+          
+          // Stop all microphone tracks to completely release the microphone
+          if (window.microphoneStream) {
+            window.microphoneStream.getTracks().forEach(track => track.stop());
+          }
           
           if (isInitialRecordingPeriod) {
             // If we're in the initial period, just stop recording without downloading
