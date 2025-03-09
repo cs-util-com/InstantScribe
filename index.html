@@ -56,7 +56,10 @@
     <!-- Moved summarize section to after transcription -->
     <div class="mt-5 border-t border-gray-600 pt-4">
       <div class="flex flex-wrap items-center gap-2.5 mb-4">
-        <button id="whisper-transcribe" class="py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700">Generate High-Quality Transcript from recorded audio</button>
+        <button id="whisper-transcribe" class="py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700 relative">Generate High-Quality Transcript from recorded audio
+          <!-- Add drag-drop instruction -->
+          <span class="text-xs block opacity-70">or drop audio file here</span>
+        </button>
         <button id="summarize" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700 hidden">Summarize Text</button>
       </div>
       
@@ -85,6 +88,7 @@
     let apiKey = localStorage.getItem('openai_api_key') || '';
     let audioChunks = []; // For native MediaRecorder
     let mp3Data = []; // For lamejs encoding
+    let droppedFile = null; // Store the dropped audio file
 
     // Move function out of DOMContentLoaded to make it globally accessible
     function updateSummarizeButtonVisibility() {
@@ -176,6 +180,60 @@
 
         await summarizeText(transcriptionText, highQualityText);
       });
+
+      // Add drag and drop functionality to the whisper button
+      whisperBtn.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        whisperBtn.classList.add('bg-green-800', 'border-2', 'border-dashed', 'border-green-400');
+      });
+      
+      whisperBtn.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      });
+      
+      whisperBtn.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        whisperBtn.classList.remove('bg-green-800', 'border-2', 'border-dashed', 'border-green-400');
+      });
+      
+      whisperBtn.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        whisperBtn.classList.remove('bg-green-800', 'border-2', 'border-dashed', 'border-green-400');
+        
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length) {
+          const file = files[0];
+          const fileType = file.type.toLowerCase();
+          
+          // Check if the file is an acceptable audio type
+          if (fileType.includes('audio') || 
+              fileType.includes('mp3') || 
+              fileType.includes('mp4') || 
+              fileType.includes('mpeg') || 
+              file.name.match(/\.(mp3|m4a|mp4|wav|ogg|webm)$/i)) {
+            
+            droppedFile = file;
+            showNotification(`Audio file "${file.name}" ready for transcription`);
+            
+            // If API key is available, start transcription immediately
+            if (apiKey) {
+              generateHighQualityTranscription();
+            } else {
+              showNotification('Please provide an OpenAI API key first');
+              document.querySelector('.api-key-input').classList.remove('hidden');
+            }
+          } else {
+            showNotification('Please drop a valid audio file (mp3, m4a, mp4, etc.)');
+          }
+        }
+      });
     });
 
     // Function to show a notification
@@ -255,19 +313,23 @@
       
       try {
         // Create a blob from audio data, using the appropriate source
-        let audioBlob;
-        if (audioChunks.length > 0) {
+        let audioFile;
+        
+        if (droppedFile) {
+          // Use the dropped file if available
+          audioFile = droppedFile;
+          console.log("Using dropped file for transcription:", droppedFile.name);
+        } else if (audioChunks.length > 0) {
           // Native MediaRecorder method
-          audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+          const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+          audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
         } else if (mp3Data.length > 0) {
           // lamejs method
-          audioBlob = new Blob(mp3Data, { type: 'audio/mpeg' });
+          const audioBlob = new Blob(mp3Data, { type: 'audio/mpeg' });
+          audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
         } else {
           throw new Error('No audio data available');
         }
-        
-        // Convert the Blob to a proper File object, which OpenAI API requires
-        const audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
         
         // Create OpenAI client
         const client = new window.OpenAI({
@@ -279,7 +341,7 @@
         const languageSelect = document.getElementById('language-select');
         const language = languageSelect.value.split('-')[0]; // Get two-letter language code
         
-        // Call Whisper API with File object instead of Blob
+        // Call Whisper API with File object
         const response = await client.audio.transcriptions.create({
           file: audioFile,
           model: 'whisper-1',
@@ -288,10 +350,17 @@
         
         // Display the transcription
         highQualityTranscription.textContent = response.text;
+        
+        // Reset the dropped file after successful transcription
+        droppedFile = null;
+        
         showNotification('High-quality transcription completed');
       } catch (error) {
         console.error('Error generating high-quality transcription:', error);
         highQualityTranscription.textContent = `Error: ${error.message}`;
+        
+        // Reset the dropped file on error too
+        droppedFile = null;
       }
     }
 
