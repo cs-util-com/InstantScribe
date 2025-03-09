@@ -122,6 +122,7 @@
       const whisperBtn = document.getElementById('whisper-transcribe');
       const transcriptionEl = document.getElementById('transcription');
       const highQualityTranscriptionEl = document.getElementById('high-quality-transcription');
+      const transcriptionContainer = document.getElementById('transcription-container');
       
       // Set the saved API key if available
       if (apiKey) {
@@ -146,6 +147,90 @@
         localStorage.setItem('openai_api_key', apiKey);
         apiKeyInput.classList.add('hidden');
         showNotification('API key saved');
+      });
+
+      // Add drag and drop functionality to the transcription container
+      transcriptionContainer.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        transcriptionContainer.classList.add('bg-gray-600', 'border-2', 'border-dashed', 'border-blue-400');
+      });
+      
+      transcriptionContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      });
+      
+      transcriptionContainer.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        transcriptionContainer.classList.remove('bg-gray-600', 'border-2', 'border-dashed', 'border-blue-400');
+      });
+      
+      transcriptionContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        transcriptionContainer.classList.remove('bg-gray-600', 'border-2', 'border-dashed', 'border-blue-400');
+        
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length) {
+          const file = files[0];
+          const fileType = file.type.toLowerCase();
+          
+          // Check if the file is a text file
+          if (fileType.includes('text/plain') || file.name.match(/\.txt$/i)) {
+            // Stop recording if in progress
+            if (isRecording) {
+              // Stop recognition
+              if (window.recognition) window.recognition.stop();
+              
+              // Stop MediaRecorder if exists and active
+              if (window.mediaRecorder && window.mediaRecorder.state === 'recording') {
+                window.mediaRecorder.stop();
+              }
+              
+              // Stop all microphone tracks to release the microphone
+              if (window.microphoneStream) {
+                window.microphoneStream.getTracks().forEach(track => track.stop());
+              }
+              
+              // Update recording state
+              isRecording = false;
+              
+              // Hide stop button
+              const stopButton = document.getElementById('stop');
+              if (stopButton) stopButton.style.display = 'none';
+              
+              showNotification('Recording stopped to load text file');
+            }
+            
+            // Read and load the file content
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const content = event.target.result;
+              
+              // Replace the transcription text
+              transcriptionEl.innerHTML = ''; // Clear existing content
+              transcriptionEl.textContent = content; // Set new content
+              
+              // Update the summarize button visibility
+              updateSummarizeButtonVisibility();
+              
+              showNotification(`Text file "${file.name}" loaded successfully`);
+            };
+            
+            reader.onerror = () => {
+              showNotification('Error reading the text file');
+            };
+            
+            reader.readAsText(file);
+          } else {
+            showNotification('Please drop a valid text (.txt) file');
+          }
+        }
       });
 
       // Whisper high-quality transcription button handler
