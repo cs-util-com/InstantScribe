@@ -25,7 +25,7 @@
       <!-- Grouped input and save button in a non-wrapping flex container -->
       <div class="flex items-center gap-2.5">
         <input type="text" id="custom-filename" placeholder="File title..." class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
-        <button id="stop" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Save Recording</button>
+        <button id="stop" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Stop Recording</button>
       </div>
       <div class="flex items-center gap-1.5">
         <label for="language-select">Transcribe in </label>
@@ -92,6 +92,7 @@
     let audioChunks = []; // For native MediaRecorder
     let mp3Data = []; // For lamejs encoding
     let droppedFile = null; // Store the dropped audio file
+    let isInitialRecordingPeriod = true; // Track if we're in the initial recording period
 
     // Move function out of DOMContentLoaded to make it globally accessible
     function updateSummarizeButtonVisibility() {
@@ -395,6 +396,12 @@
               stopButton = document.getElementById('stop'),
               customFilenameInput = document.getElementById('custom-filename');
 
+        // Change button text after 10 seconds
+        setTimeout(() => {
+          isInitialRecordingPeriod = false;
+          stopButton.textContent = 'Save Recording';
+        }, 10000);
+
         // Determine if MP3 recording is supported natively
         const isMP3Supported = MediaRecorder.isTypeSupported('audio/mpeg') || MediaRecorder.isTypeSupported('audio/mp3');
         const mimeType = isMP3Supported ? 
@@ -420,10 +427,13 @@
             if (event.data.size > 0) audioChunks.push(event.data); 
           };
           mediaRecorder.onstop = () => {
-            const customTitle = customFilenameInput.value.trim(),
-                  audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`,
-                  audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
-            downloadBlob(audioBlob, audioFileName);
+            // Only download if we're not in the initial recording period
+            if (!isInitialRecordingPeriod) {
+              const customTitle = customFilenameInput.value.trim(),
+                    audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`,
+                    audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+              downloadBlob(audioBlob, audioFileName);
+            }
           };
         } 
         // Otherwise use Web Audio API with lamejs
@@ -470,13 +480,16 @@
                 mp3Data.push(mp3Final);
               }
               
-              // Create blob from MP3 data
-              const blob = new Blob(mp3Data, { type: 'audio/mpeg' });
-              const customTitle = customFilenameInput.value.trim();
-              const audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`;
-              
-              // Download the MP3 file
-              downloadBlob(blob, audioFileName);
+              // Only download if we're not in the initial recording period
+              if (!isInitialRecordingPeriod) {
+                // Create blob from MP3 data
+                const blob = new Blob(mp3Data, { type: 'audio/mpeg' });
+                const customTitle = customFilenameInput.value.trim();
+                const audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`;
+                
+                // Download the MP3 file
+                downloadBlob(blob, audioFileName);
+              }
               
               // Clean up audio processing
               sourceNode.disconnect();
@@ -593,37 +606,47 @@
           }
           
           recognition.stop();
-          stopButton.style.display = 'none';
-          isRecording = false; // Now updates the global variable
-
-          // Remove any lingering interim transcript.
-          removeInterimTranscript();
-
-          // Retrieve the (possibly edited) transcription.
-          const transcriptionHTML = transcriptionElement.innerHTML,
-                transcriptionText = htmlToPlainText(transcriptionHTML),
-                customTitle = customFilenameInput.value.trim(),
-                transcriptFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio transcript.txt`,
-                textBlob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
-          downloadBlob(textBlob, transcriptFileName);
           
-          // Also download high-quality transcription if available
-          const highQualityTranscription = document.getElementById('high-quality-transcription');
-          if (highQualityTranscription && highQualityTranscription.textContent.trim()) {
-            const highQualityText = highQualityTranscription.textContent,
-                  highQualityFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} high quality transcript.txt`,
-                  highQualityBlob = new Blob([highQualityText], { type: 'text/plain;charset=utf-8' });
-            downloadBlob(highQualityBlob, highQualityFileName);
-          }
-          
-          // Also download summary if available
-          const summaryContent = document.getElementById('summary-content');
-          if (summaryContent && 
-              summaryContent.textContent.trim()) {
-            const summaryText = summaryContent.textContent,
-                  summaryFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} summary.txt`,
-                  summaryBlob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
-            downloadBlob(summaryBlob, summaryFileName);
+          if (isInitialRecordingPeriod) {
+            // If we're in the initial period, just stop recording without downloading
+            stopButton.style.display = 'none';
+            isRecording = false;
+            removeInterimTranscript();
+            showNotification('Recording stopped without saving files');
+          } else {
+            // Normal behavior - stop recording and download files
+            stopButton.style.display = 'none';
+            isRecording = false;
+
+            // Remove any lingering interim transcript.
+            removeInterimTranscript();
+
+            // Retrieve the (possibly edited) transcription.
+            const transcriptionHTML = transcriptionElement.innerHTML,
+                  transcriptionText = htmlToPlainText(transcriptionHTML),
+                  customTitle = customFilenameInput.value.trim(),
+                  transcriptFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio transcript.txt`,
+                  textBlob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
+            downloadBlob(textBlob, transcriptFileName);
+            
+            // Also download high-quality transcription if available
+            const highQualityTranscription = document.getElementById('high-quality-transcription');
+            if (highQualityTranscription && highQualityTranscription.textContent.trim()) {
+              const highQualityText = highQualityTranscription.textContent,
+                    highQualityFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} high quality transcript.txt`,
+                    highQualityBlob = new Blob([highQualityText], { type: 'text/plain;charset=utf-8' });
+              downloadBlob(highQualityBlob, highQualityFileName);
+            }
+            
+            // Also download summary if available
+            const summaryContent = document.getElementById('summary-content');
+            if (summaryContent && 
+                summaryContent.textContent.trim()) {
+              const summaryText = summaryContent.textContent,
+                    summaryFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} summary.txt`,
+                    summaryBlob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
+              downloadBlob(summaryBlob, summaryFileName);
+            }
           }
         });
       }).catch(error => {
