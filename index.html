@@ -79,7 +79,14 @@
     <!-- Summary Section -->
     <h3 id="summary-heading" class="hidden my-2.5 text-lg text-white">Summary:</h3>
     <div id="summary-container" class="hidden mt-4 p-2.5 border border-gray-600 rounded bg-gray-700">
-      <div id="summary-content" class="whitespace-pre-wrap font-mono text-sm text-green-300"></div>
+      <div id="summary-content" class="whitespace-pre-wrap font-mono text-sm text-green-300" contenteditable="true"></div>
+    </div>
+    
+    <!-- Download AI texts button -->
+    <div id="download-ai-texts-container" class="hidden mt-4">
+      <button id="download-ai-texts" class="w-full py-2 px-3 bg-purple-600 text-white border-none rounded cursor-pointer text-base hover:bg-purple-700">
+        Download AI Texts
+      </button>
     </div>
   </div>
 
@@ -109,6 +116,22 @@
         summarizeBtn.classList.remove('hidden');
       } else {
         summarizeBtn.classList.add('hidden');
+      }
+    }
+
+    // Move this function out of DOMContentLoaded to make it globally accessible
+    function updateDownloadAiTextsButtonVisibility() {
+      const highQualityTranscriptionEl = document.getElementById('high-quality-transcription');
+      const summaryContentEl = document.getElementById('summary-content');
+      const downloadAiTextsContainer = document.getElementById('download-ai-texts-container');
+      
+      const hasHighQualityText = highQualityTranscriptionEl && highQualityTranscriptionEl.textContent.trim().length > 0;
+      const hasSummaryText = summaryContentEl && summaryContentEl.textContent.trim().length > 0;
+      
+      if (hasHighQualityText || hasSummaryText) {
+        downloadAiTextsContainer.classList.remove('hidden');
+      } else {
+        downloadAiTextsContainer.classList.add('hidden');
       }
     }
 
@@ -233,6 +256,11 @@
         }
       });
 
+      const summaryContentEl = document.getElementById('summary-content');
+      
+      highQualityTranscriptionEl.addEventListener('input', updateDownloadAiTextsButtonVisibility);
+      summaryContentEl.addEventListener('input', updateDownloadAiTextsButtonVisibility);
+
       // Whisper high-quality transcription button handler
       whisperBtn.addEventListener('click', async () => {
         if (!apiKey) {
@@ -241,14 +269,41 @@
           return;
         }
 
-        if (audioChunks.length === 0 && mp3Data.length === 0) {
+        if (audioChunks.length === 0 && mp3Data.length === 0 && !droppedFile) {
           showNotification('No audio recorded yet');
           return;
         }
 
         await generateHighQualityTranscription();
-        // After transcription is done, check if we should show summarize button
+        // After transcription is done, check if we should show buttons
         updateSummarizeButtonVisibility();
+        updateDownloadAiTextsButtonVisibility();
+      });
+
+      // Download AI texts button handler
+      document.getElementById('download-ai-texts').addEventListener('click', () => {
+        const recordingStartTime = Date.now();
+        const customTitle = document.getElementById('custom-filename').value.trim();
+        
+        // Download high-quality transcription if available
+        const highQualityTranscription = document.getElementById('high-quality-transcription');
+        if (highQualityTranscription && highQualityTranscription.textContent.trim()) {
+          const highQualityText = highQualityTranscription.textContent,
+                highQualityFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} high quality transcript.txt`,
+                highQualityBlob = new Blob([highQualityText], { type: 'text/plain;charset=utf-8' });
+          downloadBlob(highQualityBlob, highQualityFileName);
+        }
+        
+        // Download summary if available
+        const summaryContent = document.getElementById('summary-content');
+        if (summaryContent && summaryContent.textContent.trim()) {
+          const summaryText = summaryContent.textContent,
+                summaryFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} summary.txt`,
+                summaryBlob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
+          downloadBlob(summaryBlob, summaryFileName);
+        }
+        
+        showNotification('AI texts downloaded');
       });
 
       // Summarize button event handler
@@ -385,6 +440,9 @@
         // Display the summary
         const summary = response.choices[0].message.content;
         summaryContent.textContent = summary;
+        
+        // Check if download button should be shown
+        updateDownloadAiTextsButtonVisibility();
       } catch (error) {
         console.error('Error generating summary:', error);
         summaryContent.textContent = `Error generating summary: ${error.message}`;
@@ -442,6 +500,9 @@
         
         // Reset the dropped file after successful transcription
         droppedFile = null;
+        
+        // Check if download button should be shown
+        updateDownloadAiTextsButtonVisibility();
         
         showNotification('High-quality transcription completed');
       } catch (error) {
