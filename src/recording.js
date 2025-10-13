@@ -223,19 +223,19 @@ export class Recorder {
   }
 }
 
+function resolveDocument(environment) {
+  if ('document' in environment) return environment.document;
+  return typeof document !== 'undefined' ? document : null;
+}
+
+function resolveUrl(environment) {
+  if ('URL' in environment) return environment.URL;
+  return typeof URL !== 'undefined' ? URL : null;
+}
+
 export function downloadBlob(blob, fileName, environment = {}) {
-  const doc =
-    environment.document !== undefined
-      ? environment.document
-      : typeof document !== 'undefined'
-        ? document
-        : null;
-  const url =
-    environment.URL !== undefined
-      ? environment.URL
-      : typeof URL !== 'undefined'
-        ? URL
-        : null;
+  const doc = resolveDocument(environment);
+  const url = resolveUrl(environment);
 
   if (!blob || !doc || !url) return;
 

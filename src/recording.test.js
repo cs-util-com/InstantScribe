@@ -42,6 +42,22 @@ describe('recording helpers', () => {
     expect(checkRecorderSupport(undefined)).toBe(false);
   });
 
+  test('checkRecorderSupport uses global window by default', () => {
+    const originalMediaRecorder = window.MediaRecorder;
+    const originalSpeech = window.SpeechRecognition;
+    window.MediaRecorder = function MockRecorder() {};
+    window.SpeechRecognition = function MockSpeech() {};
+
+    expect(checkRecorderSupport()).toBe(true);
+
+    window.MediaRecorder = originalMediaRecorder;
+    window.SpeechRecognition = originalSpeech;
+  });
+
+  test('checkRecorderSupport handles missing properties', () => {
+    expect(checkRecorderSupport({})).toBe(false);
+  });
+
   test('downloadBlob appends anchor and revokes URL', () => {
     const blob = new Blob(['test'], { type: 'text/plain' });
     const originalCreate = URL.createObjectURL;
@@ -87,8 +103,74 @@ describe('recording helpers', () => {
     expect(env.URL.revokeObjectURL).not.toHaveBeenCalled();
   });
 
+  test('downloadBlob falls back to documentElement when body is unavailable', () => {
+    const blob = new Blob(['test'], { type: 'text/plain' });
+    const link = { href: '', download: '', click: jest.fn() };
+    const target = {
+      appendChild: jest.fn(),
+      removeChild: jest.fn(),
+    };
+    const doc = {
+      body: null,
+      documentElement: target,
+      createElement: jest.fn(() => link),
+    };
+    const url = {
+      createObjectURL: jest.fn(() => 'blob:url'),
+      revokeObjectURL: jest.fn(),
+    };
+
+    downloadBlob(blob, 'file.txt', { document: doc, URL: url });
+
+    expect(doc.createElement).toHaveBeenCalledWith('a');
+    expect(target.appendChild).toHaveBeenCalledWith(link);
+    expect(link.click).toHaveBeenCalled();
+    expect(target.removeChild).toHaveBeenCalledWith(link);
+    expect(url.revokeObjectURL).toHaveBeenCalledWith('blob:url');
+  });
+
+  test('downloadBlob exits when no append target is available', () => {
+    const blob = new Blob(['test'], { type: 'text/plain' });
+    const doc = {
+      body: null,
+      documentElement: null,
+      createElement: jest.fn(),
+    };
+    const url = {
+      createObjectURL: jest.fn(),
+      revokeObjectURL: jest.fn(),
+    };
+
+    downloadBlob(blob, 'file.txt', { document: doc, URL: url });
+
+    expect(doc.createElement).not.toHaveBeenCalled();
+    expect(url.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  test('downloadBlob exits when URL helpers are unavailable', () => {
+    const blob = new Blob(['test'], { type: 'text/plain' });
+    const doc = {
+      body: {
+        appendChild: jest.fn(),
+        removeChild: jest.fn(),
+      },
+      documentElement: null,
+      createElement: jest.fn(),
+    };
+
+    downloadBlob(blob, 'file.txt', { document: doc, URL: null });
+
+    expect(doc.createElement).not.toHaveBeenCalled();
+    expect(doc.body.appendChild).not.toHaveBeenCalled();
+  });
+
   test('htmlToPlainText returns original value when document is unavailable', () => {
     const html = '<p>Hello</p>';
     expect(htmlToPlainText(html, { document: null })).toBe(html);
+  });
+
+  test('htmlToPlainText handles non-break elements and comments', () => {
+    const html = '<div><span>Inline</span><!--comment--></div>';
+    expect(htmlToPlainText(html)).toBe('Inline');
   });
 });
