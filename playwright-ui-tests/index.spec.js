@@ -7,13 +7,20 @@ test.describe('index.html smoke test', () => {
     const allowedWarningPatterns = [
       /cdn\.tailwindcss\.com should not be used in production/i,
     ];
+    const allowedErrorPatterns = [/error accessing microphone: notfounderror/i];
 
     page.on('console', (message) => {
       const type = message.type();
       const text = message.text();
 
       if (type === 'error') {
-        consoleIssues.push({ type, text });
+        const isAllowed = allowedErrorPatterns.some((pattern) =>
+          pattern.test(text)
+        );
+
+        if (!isAllowed) {
+          consoleIssues.push({ type, text });
+        }
       } else if (type === 'warning') {
         const isAllowed = allowedWarningPatterns.some((pattern) =>
           pattern.test(text)
@@ -43,11 +50,11 @@ test.describe('index.html smoke test', () => {
     // Using 'load' avoids timeouts seen when parallel browsers wait for 'networkidle'.
     await page.waitForLoadState('load');
 
-    const heroHeading = page.getByRole('heading', {
-      level: 1,
-      name: /template web app/i,
+    const transcriptionHeading = page.getByRole('heading', {
+      level: 3,
+      name: /transcription:?/i,
     });
-    await expect(heroHeading).toBeVisible();
+    await expect(transcriptionHeading).toBeVisible();
 
     expect(consoleIssues, 'Console warning/error detected while loading index.html').toEqual([]);
     expect(pageErrors, 'Unhandled page errors detected while loading index.html').toEqual([]);
