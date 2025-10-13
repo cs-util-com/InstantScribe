@@ -1,0 +1,96 @@
+name: Claude Agent - Issue to PR
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: claude-agent-${{ github.event.issue.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  claude-agent:
+    if: |
+      (github.event_name == 'issue_comment' && 
+       contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && 
+       contains(github.event.issue.body, '@claude'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure git
+        run: |
+          git config user.name "claude-agent[bot]"
+          git config user.email "claude-agent[bot]@users.noreply.github.com"
+
+      - name: Run Claude Code Agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          trigger_phrase: "@claude"
+          timeout_minutes: "25"
+          max_turns: "15"
+          model: "claude-3-5-sonnet-20240620"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post completion status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const issueNumber = context.issue.number;
+            
+            let message;
+            if (status === 'success') {
+              message = '🤖 **Claude Agent Task Completed**\n\n' +
+                       'The agent has successfully processed this issue. ' +
+                       'Please check for a new pull request or updates to existing PRs.\n\n' +
+                       '**Next Steps:**\n' +
+                       '- Review the created/updated PR\n' +
+                       '- Verify all tests pass\n' +
+                       '- Check code quality metrics\n' +
+                       '- Merge when ready';
+            } else if (status === 'failure') {
+              message = '❌ **Claude Agent Task Failed**\n\n' +
+                       'The agent encountered an error while processing this issue. ' +
+                       'Please check the workflow logs for details.\n\n' +
+                       '**Possible next steps:**\n' +
+                       '- Review the error logs\n' +
+                       '- Clarify requirements if needed\n' +
+                       '- Try again with `@claude` comment';
+            } else {
+              message = '⏰ **Claude Agent Task Cancelled**\n\n' +
+                       'The agent task was cancelled (likely due to timeout or cancellation).\n\n' +
+                       'You can retry by commenting `@claude` again.';
+            }
+            
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });

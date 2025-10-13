@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.js-debug-nightly",
+    "mhutchie.git-graph",
+    "GitHub.copilot",
+    "ritwickdey.liveserver",
+    "esbenp.prettier-vscode"
+  ]
+}

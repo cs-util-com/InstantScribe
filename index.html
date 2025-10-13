@@ -1,873 +1,146 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Audio Recorder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ff0000'/%3E%3C/svg%3E"
+      type="image/svg+xml"
+    />
+    <!-- Add lamejs library -->
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+    <!-- Added Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <title>Audio Recorder</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23ff0000'/%3E%3C/svg%3E" type="image/svg+xml">
-  <!-- Add lamejs library -->
-  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
-  <!-- Import OpenAI library -->
-  <script type="module">
-    // Using a semver range with tilde (~) to get automatic patch updates but not minor version changes
-    // This balances stability with security fixes and bug fixes
-    import OpenAI from 'https://esm.sh/openai@~4.86.2?target=es2020';
-    window.OpenAI = OpenAI;
-  </script>
-  <!-- Added Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="font-mono m-0 p-2.5 bg-gray-900 text-gray-200">
-  <div class="max-w-3xl mx-auto bg-gray-800 p-4 rounded-lg shadow-md">
-    <div class="flex flex-wrap items-center gap-2.5 mb-4">
-      <!-- Grouped input and save button in a non-wrapping flex container -->
-      <div class="flex items-center gap-2.5">
-        <input type="text" id="custom-filename" placeholder="File title..." class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
-        <button id="stop" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Stop Recording</button>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <label for="language-select">Transcribe in </label>
-        <select id="language-select" class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
-          <option value="en-US">English (US)</option>
-          <option value="en-GB">English (UK)</option>
-          <option value="de-DE">German</option>
-          <option value="fr-FR">French</option>
-          <option value="es-ES">Spanish</option>
-          <option value="it-IT">Italian</option>
-          <option value="ja-JP">Japanese</option>
-          <option value="zh-CN">Chinese (Simplified)</option>
-        </select>
-      </div>
-    </div>
-
-    <h3 class="my-2.5 text-lg text-white">Transcription:</h3>
-    <div id="transcription-container" class="mt-4 p-2.5 border border-gray-600 rounded whitespace-pre-wrap font-mono text-sm bg-gray-700 text-gray-200">
-      <!-- The transcription element is contenteditable (editable by the user) -->
-      <div id="transcription" contenteditable="true"></div>
-    </div>
-
-    <!-- Add high-quality transcript container -->
-    <div id="high-quality-container" class="hidden mt-4">
-      <h3 class="my-2.5 text-lg text-white">High-Quality Transcription:</h3>
-      <div class="p-2.5 border border-green-600 rounded whitespace-pre-wrap font-mono text-sm bg-gray-700 text-gray-200">
-        <div id="high-quality-transcription" contenteditable="true"></div>
-      </div>
-    </div>
-
-    <!-- Moved summarize section to after transcription -->
-    <div class="mt-5 border-t border-gray-600 pt-4">
+  <body class="font-mono m-0 p-2.5 bg-gray-900 text-gray-200">
+    <div class="max-w-3xl mx-auto bg-gray-800 p-4 rounded-lg shadow-md">
       <div class="flex flex-wrap items-center gap-2.5 mb-4">
-        <button id="whisper-transcribe" class="w-full py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700 relative">Generate High-Quality Transcript from recorded audio
-          <!-- Add drag-drop instruction -->
-          <span class="text-xs block opacity-70">or drop audio file here</span>
-        </button>
-        <button id="summarize" class="w-full py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700 hidden">Summarize Text</button>
-      </div>
-      
-      <!-- API Key Section -->
-      <div class="my-2.5 p-2.5 border border-dashed border-gray-500 rounded bg-gray-800">
-        <div class="api-key-toggle cursor-pointer text-blue-500 select-none">⚙️ OpenAI API Settings (click to expand)</div>
-        <div class="api-key-input hidden mt-2">
-          <input type="password" id="api-key" placeholder="Enter your OpenAI API key (sk-...)" class="w-[calc(100%-125px)] mr-2.5 p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200">
-          <button id="save-api-key" class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700">Save</button>
+        <!-- Grouped input and save button in a non-wrapping flex container -->
+        <div class="flex items-center gap-2.5">
+          <input
+            type="text"
+            id="custom-filename"
+            placeholder="File title..."
+            class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200"
+          />
+          <button
+            id="stop"
+            class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700"
+          >
+            Stop Recording
+          </button>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <label for="language-select">Transcribe in </label>
+          <select
+            id="language-select"
+            class="p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200"
+          >
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="de-DE">German</option>
+            <option value="fr-FR">French</option>
+            <option value="es-ES">Spanish</option>
+            <option value="it-IT">Italian</option>
+            <option value="ja-JP">Japanese</option>
+            <option value="zh-CN">Chinese (Simplified)</option>
+          </select>
         </div>
       </div>
+
+      <h3 class="my-2.5 text-lg text-white">Transcription:</h3>
+      <div
+        id="transcription-container"
+        class="mt-4 p-2.5 border border-gray-600 rounded whitespace-pre-wrap font-mono text-sm bg-gray-700 text-gray-200"
+      >
+        <!-- The transcription element is contenteditable (editable by the user) -->
+        <div id="transcription" contenteditable="true"></div>
+      </div>
+
+      <!-- Add high-quality transcript container -->
+      <div id="high-quality-container" class="hidden mt-4">
+        <h3 class="my-2.5 text-lg text-white">High-Quality Transcription:</h3>
+        <div
+          class="p-2.5 border border-green-600 rounded whitespace-pre-wrap font-mono text-sm bg-gray-700 text-gray-200"
+        >
+          <div id="high-quality-transcription" contenteditable="true"></div>
+        </div>
+      </div>
+
+      <!-- Moved summarize section to after transcription -->
+      <div class="mt-5 border-t border-gray-600 pt-4">
+        <div class="flex flex-wrap items-center gap-2.5 mb-4">
+          <button
+            id="whisper-transcribe"
+            class="w-full py-2 px-3 bg-green-600 text-white border-none rounded cursor-pointer text-base hover:bg-green-700 relative"
+          >
+            Generate High-Quality Transcript from recorded audio
+            <!-- Add drag-drop instruction -->
+            <span class="text-xs block opacity-70"
+              >or drop audio file here</span
+            >
+          </button>
+          <button
+            id="summarize"
+            class="w-full py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700 hidden"
+          >
+            Summarize Text
+          </button>
+        </div>
+
+        <!-- API Key Section -->
+        <div
+          class="my-2.5 p-2.5 border border-dashed border-gray-500 rounded bg-gray-800"
+        >
+          <div class="api-key-toggle cursor-pointer text-blue-500 select-none">
+            ⚙️ OpenAI API Settings (click to expand)
+          </div>
+          <div class="api-key-input hidden mt-2">
+            <input
+              type="password"
+              id="api-key"
+              placeholder="Enter your OpenAI API key (sk-...)"
+              class="w-[calc(100%-125px)] mr-2.5 p-1.5 text-base bg-gray-700 border border-gray-600 rounded text-gray-200"
+            />
+            <button
+              id="save-api-key"
+              class="py-2 px-3 bg-blue-600 text-white border-none rounded cursor-pointer text-base hover:bg-blue-700"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Section -->
+      <h3 id="summary-heading" class="hidden my-2.5 text-lg text-white">
+        Summary:
+      </h3>
+      <div
+        id="summary-container"
+        class="hidden mt-4 p-2.5 border border-gray-600 rounded bg-gray-700"
+      >
+        <div
+          id="summary-content"
+          class="whitespace-pre-wrap font-mono text-sm text-green-300"
+          contenteditable="true"
+        ></div>
+      </div>
+
+      <!-- Download AI texts button -->
+      <div id="download-ai-texts-container" class="hidden mt-4">
+        <button
+          id="download-ai-texts"
+          class="w-full py-2 px-3 bg-purple-600 text-white border-none rounded cursor-pointer text-base hover:bg-purple-700"
+        >
+          Download AI Texts
+        </button>
+      </div>
     </div>
 
-    <!-- Summary Section -->
-    <h3 id="summary-heading" class="hidden my-2.5 text-lg text-white">Summary:</h3>
-    <div id="summary-container" class="hidden mt-4 p-2.5 border border-gray-600 rounded bg-gray-700">
-      <div id="summary-content" class="whitespace-pre-wrap font-mono text-sm text-green-300" contenteditable="true"></div>
-    </div>
-    
-    <!-- Download AI texts button -->
-    <div id="download-ai-texts-container" class="hidden mt-4">
-      <button id="download-ai-texts" class="w-full py-2 px-3 bg-purple-600 text-white border-none rounded cursor-pointer text-base hover:bg-purple-700">
-        Download AI Texts
-      </button>
-    </div>
-  </div>
-
-  <script>
-    // Global variable to track recording state
-    let isRecording = false;
-    let exitWarningEnabled = false;
-    let mp3Encoder = null;
-    let apiKey = localStorage.getItem('openai_api_key') || '';
-    let audioChunks = []; // For native MediaRecorder
-    let mp3Data = []; // For lamejs encoding
-    let droppedFile = null; // Store the dropped audio file
-    let isInitialRecordingPeriod = true; // Track if we're in the initial recording period
-
-    // Move function out of DOMContentLoaded to make it globally accessible
-    function updateSummarizeButtonVisibility() {
-      const transcriptionEl = document.getElementById('transcription');
-      const highQualityTranscriptionEl = document.getElementById('high-quality-transcription');
-      const summarizeBtn = document.getElementById('summarize');
-      
-      if (!transcriptionEl || !summarizeBtn) return;
-      
-      const hasTranscriptionText = transcriptionEl.textContent.trim().length > 0;
-      const hasHighQualityText = highQualityTranscriptionEl ? highQualityTranscriptionEl.textContent.trim().length > 0 : false;
-      
-      if (hasTranscriptionText || hasHighQualityText) {
-        summarizeBtn.classList.remove('hidden');
-      } else {
-        summarizeBtn.classList.add('hidden');
-      }
-    }
-
-    // Move this function out of DOMContentLoaded to make it globally accessible
-    function updateDownloadAiTextsButtonVisibility() {
-      const highQualityTranscriptionEl = document.getElementById('high-quality-transcription');
-      const summaryContentEl = document.getElementById('summary-content');
-      const downloadAiTextsContainer = document.getElementById('download-ai-texts-container');
-      
-      const hasHighQualityText = highQualityTranscriptionEl && highQualityTranscriptionEl.textContent.trim().length > 0;
-      const hasSummaryText = summaryContentEl && summaryContentEl.textContent.trim().length > 0;
-      
-      if (hasHighQualityText || hasSummaryText) {
-        downloadAiTextsContainer.classList.remove('hidden');
-      } else {
-        downloadAiTextsContainer.classList.add('hidden');
-      }
-    }
-
-    // Initialize API key section
-    document.addEventListener('DOMContentLoaded', () => {
-      const apiKeyToggle = document.querySelector('.api-key-toggle');
-      const apiKeyInput = document.querySelector('.api-key-input');
-      const apiKeyField = document.getElementById('api-key');
-      const saveApiKeyBtn = document.getElementById('save-api-key');
-      const summarizeBtn = document.getElementById('summarize');
-      const whisperBtn = document.getElementById('whisper-transcribe');
-      const transcriptionEl = document.getElementById('transcription');
-      const highQualityTranscriptionEl = document.getElementById('high-quality-transcription');
-      const transcriptionContainer = document.getElementById('transcription-container');
-      
-      // Set the saved API key if available
-      if (apiKey) {
-        apiKeyField.value = apiKey;
-      }
-
-      // Run initially
-      updateSummarizeButtonVisibility();
-      
-      // Set up listeners for content changes
-      transcriptionEl.addEventListener('input', updateSummarizeButtonVisibility);
-      highQualityTranscriptionEl.addEventListener('input', updateSummarizeButtonVisibility);
-
-      // Toggle API key input visibility
-      apiKeyToggle.addEventListener('click', () => {
-        apiKeyInput.classList.toggle('hidden');
-      });
-
-      // Save API key to localStorage
-      saveApiKeyBtn.addEventListener('click', () => {
-        apiKey = apiKeyField.value.trim();
-        localStorage.setItem('openai_api_key', apiKey);
-        apiKeyInput.classList.add('hidden');
-        showNotification('API key saved');
-      });
-
-      // Add drag and drop functionality to the transcription container
-      transcriptionContainer.addEventListener('dragenter', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        transcriptionContainer.classList.add('bg-gray-600', 'border-2', 'border-dashed', 'border-blue-400');
-      });
-      
-      transcriptionContainer.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      });
-      
-      transcriptionContainer.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        transcriptionContainer.classList.remove('bg-gray-600', 'border-2', 'border-dashed', 'border-blue-400');
-      });
-      
-      transcriptionContainer.addEventListener('drop', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        transcriptionContainer.classList.remove('bg-gray-600', 'border-2', 'border-dashed', 'border-blue-400');
-        
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        
-        if (files.length) {
-          const file = files[0];
-          const fileType = file.type.toLowerCase();
-          
-          // Check if the file is a text file
-          if (fileType.includes('text/plain') || file.name.match(/\.txt$/i)) {
-            // Stop recording if in progress
-            if (isRecording) {
-              // Stop recognition
-              if (window.recognition) window.recognition.stop();
-              
-              // Stop MediaRecorder if exists and active
-              if (window.mediaRecorder && window.mediaRecorder.state === 'recording') {
-                window.mediaRecorder.stop();
-              }
-              
-              // Stop all microphone tracks to release the microphone
-              if (window.microphoneStream) {
-                window.microphoneStream.getTracks().forEach(track => track.stop());
-              }
-              
-              // Update recording state
-              isRecording = false;
-              
-              // Hide stop button
-              const stopButton = document.getElementById('stop');
-              if (stopButton) stopButton.style.display = 'none';
-              
-              showNotification('Recording stopped to load text file');
-            }
-            
-            // Read and load the file content
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const content = event.target.result;
-              
-              // Replace the transcription text
-              transcriptionEl.innerHTML = ''; // Clear existing content
-              transcriptionEl.textContent = content; // Set new content
-              
-              // Update the summarize button visibility
-              updateSummarizeButtonVisibility();
-              
-              showNotification(`Text file "${file.name}" loaded successfully`);
-            };
-            
-            reader.onerror = () => {
-              showNotification('Error reading the text file');
-            };
-            
-            reader.readAsText(file);
-          } else {
-            showNotification('Please drop a valid text (.txt) file');
-          }
-        }
-      });
-
-      const summaryContentEl = document.getElementById('summary-content');
-      
-      highQualityTranscriptionEl.addEventListener('input', updateDownloadAiTextsButtonVisibility);
-      summaryContentEl.addEventListener('input', updateDownloadAiTextsButtonVisibility);
-
-      // Whisper high-quality transcription button handler
-      whisperBtn.addEventListener('click', async () => {
-        if (!apiKey) {
-          showNotification('Please provide an OpenAI API key first');
-          apiKeyInput.classList.remove('hidden');
-          return;
-        }
-
-        if (audioChunks.length === 0 && mp3Data.length === 0 && !droppedFile) {
-          showNotification('No audio recorded yet');
-          return;
-        }
-
-        await generateHighQualityTranscription();
-        // After transcription is done, check if we should show buttons
-        updateSummarizeButtonVisibility();
-        updateDownloadAiTextsButtonVisibility();
-      });
-
-      // Download AI texts button handler
-      document.getElementById('download-ai-texts').addEventListener('click', () => {
-        const recordingStartTime = Date.now();
-        const customTitle = document.getElementById('custom-filename').value.trim();
-        
-        // Download high-quality transcription if available
-        const highQualityTranscription = document.getElementById('high-quality-transcription');
-        if (highQualityTranscription && highQualityTranscription.textContent.trim()) {
-          const highQualityText = highQualityTranscription.textContent,
-                highQualityFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} high quality transcript.txt`,
-                highQualityBlob = new Blob([highQualityText], { type: 'text/plain;charset=utf-8' });
-          downloadBlob(highQualityBlob, highQualityFileName);
-        }
-        
-        // Download summary if available
-        const summaryContent = document.getElementById('summary-content');
-        if (summaryContent && summaryContent.textContent.trim()) {
-          const summaryText = summaryContent.textContent,
-                summaryFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} summary.txt`,
-                summaryBlob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
-          downloadBlob(summaryBlob, summaryFileName);
-        }
-        
-        showNotification('AI texts downloaded');
-      });
-
-      // Summarize button event handler
-      summarizeBtn.addEventListener('click', async () => {
-        const transcriptionText = document.getElementById('transcription').textContent;
-        const highQualityText = document.getElementById('high-quality-transcription').textContent;
-        
-        if (!transcriptionText.trim() && !highQualityText.trim()) {
-          showNotification('No transcription text to summarize');
-          return;
-        }
-
-        if (!apiKey) {
-          showNotification('Please provide an OpenAI API key first');
-          apiKeyInput.classList.remove('hidden');
-          return;
-        }
-
-        await summarizeText(transcriptionText, highQualityText);
-      });
-
-      // Add drag and drop functionality to the whisper button
-      whisperBtn.addEventListener('dragenter', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        whisperBtn.classList.add('bg-green-800', 'border-2', 'border-dashed', 'border-green-400');
-      });
-      
-      whisperBtn.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      });
-      
-      whisperBtn.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        whisperBtn.classList.remove('bg-green-800', 'border-2', 'border-dashed', 'border-green-400');
-      });
-      
-      whisperBtn.addEventListener('drop', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        whisperBtn.classList.remove('bg-green-800', 'border-2', 'border-dashed', 'border-green-400');
-        
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        
-        if (files.length) {
-          const file = files[0];
-          const fileType = file.type.toLowerCase();
-          
-          // Check if the file is an acceptable audio type
-          if (fileType.includes('audio') || 
-              fileType.includes('mp3') || 
-              fileType.includes('mp4') || 
-              fileType.includes('mpeg') || 
-              file.name.match(/\.(mp3|m4a|mp4|wav|ogg|webm)$/i)) {
-            
-            droppedFile = file;
-            showNotification(`Audio file "${file.name}" ready for transcription`);
-            
-            // If API key is available, start transcription immediately
-            if (apiKey) {
-              generateHighQualityTranscription();
-            } else {
-              showNotification('Please provide an OpenAI API key first');
-              document.querySelector('.api-key-input').classList.remove('hidden');
-            }
-          } else {
-            showNotification('Please drop a valid audio file (mp3, m4a, mp4, etc.)');
-          }
-        }
-      });
-    });
-
-    // Function to show a notification
-    function showNotification(message, duration = 3000) {
-      const notification = document.createElement('div');
-      notification.className = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-black/70 text-white py-2.5 px-4 rounded-md z-50 text-center transition-opacity duration-500';
-      notification.textContent = message;
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 500);
-      }, duration);
-    }
-
-    // Updated function to summarize text using OpenAI API
-    async function summarizeText(lowQualityText, highQualityText = '') {
-      const summaryHeading = document.getElementById('summary-heading');
-      const summaryContainer = document.getElementById('summary-container');
-      const summaryContent = document.getElementById('summary-content');
-      
-      summaryHeading.classList.remove('hidden');
-      summaryContainer.classList.remove('hidden');
-      summaryContent.textContent = 'Generating summary...';
-
-      try {
-        // Create OpenAI client
-        const client = new window.OpenAI({
-          apiKey: apiKey,
-          dangerouslyAllowBrowser: true,
-        });
-
-        let prompt = `As a professional transcriber and summarizer, please analyze the following audio transcriptions and produce both a clear, concise summary that captures the key topics, main points, and any critical details.
-        First, identify the main ideas and list the top 3–5 key takeaways. Then, compose a structured paragraph that integrates these points in a logical, easy-to-read format.
-        After these sections also write down an accurate, high-quality transcription (that still lists the timestamps if available) and NEVER truncate it but always provide it in its full extend even if its very long!
-        For all your produced work, use the same language as the original transcription (e.g. if transcription is German, your result should be in German).
-         \n\n`;
-        if (highQualityText.trim()) {
-          // Use improved prompt that considers both transcriptions
-          prompt += `Two transcription versions are provided, prioritize the high-quality version for summarization while cross-checking the low-quality version for error correction etc. 
-          Low Quality Transcription: \n\n${lowQualityText}
-          High Quality Transcription: \n\n${highQualityText}`;
-        } else {
-          // Use only the low-quality transcription
-          prompt += `Transcription: \n\n${lowQualityText}`;
-        }
-
-        // Call the API
-        const response = await client.chat.completions.create({
-          model: 'gpt-4o-mini', // Using a less expensive model for summaries
-          messages: [
-            { 
-              role: 'user', 
-              content: prompt
-            }
-          ],
-          max_tokens: 16384
-        });
-
-        // Display the summary
-        const summary = response.choices[0].message.content;
-        summaryContent.textContent = summary;
-        
-        // Check if download button should be shown
-        updateDownloadAiTextsButtonVisibility();
-      } catch (error) {
-        console.error('Error generating summary:', error);
-        summaryContent.textContent = `Error generating summary: ${error.message}`;
-      }
-    }
-
-    // Function to generate high-quality transcription using Whisper API
-    async function generateHighQualityTranscription() {
-      const highQualityContainer = document.getElementById('high-quality-container');
-      const highQualityTranscription = document.getElementById('high-quality-transcription');
-      
-      // Show container and loading message
-      highQualityContainer.classList.remove('hidden');
-      highQualityTranscription.textContent = 'Generating high-quality transcription...';
-      
-      try {
-        // Create a blob from audio data, using the appropriate source
-        let audioFile;
-        
-        if (droppedFile) {
-          // Use the dropped file if available
-          audioFile = droppedFile;
-          console.log("Using dropped file for transcription:", droppedFile.name);
-        } else if (audioChunks.length > 0) {
-          // Native MediaRecorder method
-          const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
-          audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
-        } else if (mp3Data.length > 0) {
-          // lamejs method
-          const audioBlob = new Blob(mp3Data, { type: 'audio/mpeg' });
-          audioFile = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
-        } else {
-          throw new Error('No audio data available');
-        }
-        
-        // Create OpenAI client
-        const client = new window.OpenAI({
-          apiKey: apiKey,
-          dangerouslyAllowBrowser: true,
-        });
-        
-        // Get selected language
-        const languageSelect = document.getElementById('language-select');
-        const language = languageSelect.value.split('-')[0]; // Get two-letter language code
-        
-        // Call Whisper API with File object
-        const response = await client.audio.transcriptions.create({
-          file: audioFile,
-          model: 'whisper-1',
-          language: language
-        });
-        
-        // Display the transcription
-        highQualityTranscription.textContent = response.text;
-        
-        // Reset the dropped file after successful transcription
-        droppedFile = null;
-        
-        // Check if download button should be shown
-        updateDownloadAiTextsButtonVisibility();
-        
-        showNotification('High-quality transcription completed');
-      } catch (error) {
-        console.error('Error generating high-quality transcription:', error);
-        highQualityTranscription.textContent = `Error: ${error.message}`;
-        
-        // Reset the dropped file on error too
-        droppedFile = null;
-      }
-    }
-
-    // Check if the browser supports the required APIs
-    if (!window.MediaRecorder || !(window.webkitSpeechRecognition || window.SpeechRecognition)) {
-      alert("Your browser does not support the required APIs for audio recording and transcription.");
-    } else {
-      // Show notification to encourage user interaction
-      const notification = document.createElement('div');
-      notification.className = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-black/70 text-white py-2.5 px-4 rounded-md z-50 text-center transition-opacity duration-500';
-      notification.innerHTML = 'Recording & Transcription started (Click anywhere to hide message)';
-      document.body.appendChild(notification);
-      
-      // Set up one-time click handler to enable exit warnings
-      document.addEventListener('click', function enableExitWarning() {
-        exitWarningEnabled = true;
-        document.removeEventListener('click', enableExitWarning);
-        // Fade out and remove notification
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 500);
-      }, { once: true });
-
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        // Store the stream in a global variable so we can stop all tracks later
-        window.microphoneStream = stream;
-        
-        // Use a single timestamp for the entire recording session.
-        const recordingStartTime = Date.now();
-        // Grab DOM elements for use in event handlers.
-        const transcriptionElement = document.getElementById('transcription'),
-              languageSelect = document.getElementById('language-select'),
-              stopButton = document.getElementById('stop'),
-              customFilenameInput = document.getElementById('custom-filename');
-
-        // Change button text after 10 seconds
-        setTimeout(() => {
-          isInitialRecordingPeriod = false;
-          stopButton.textContent = 'Save Recording';
-        }, 10000);
-
-        // Determine if MP3 recording is supported natively
-        const isMP3Supported = MediaRecorder.isTypeSupported('audio/mpeg') || MediaRecorder.isTypeSupported('audio/mp3');
-        const mimeType = isMP3Supported ? 
-                         (MediaRecorder.isTypeSupported('audio/mpeg') ? 'audio/mpeg' : 'audio/mp3') : 
-                         ['audio/ogg', 'audio/mp4', 'audio/webm'].find(type => MediaRecorder.isTypeSupported(type)) || '';
-        
-        // Always use MP3 as the file extension, even if we'll be encoding manually
-        const fileExtension = 'mp3';
-        
-        let audioProcessor = null;
-        let audioContext = null;
-        let mediaRecorder = null;
-
-        // Make audioChunks global and reset it
-        audioChunks = [];
-        // Also reset mp3Data
-        mp3Data = [];
-
-        // If MP3 is natively supported, use MediaRecorder
-        if (isMP3Supported) {
-          mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 });
-          mediaRecorder.ondataavailable = event => { 
-            if (event.data.size > 0) audioChunks.push(event.data); 
-          };
-          mediaRecorder.onstop = () => {
-            // Only download if we're not in the initial recording period
-            if (!isInitialRecordingPeriod) {
-              const customTitle = customFilenameInput.value.trim(),
-                    audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`,
-                    audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
-              downloadBlob(audioBlob, audioFileName);
-            }
-          };
-        } 
-        // Otherwise use Web Audio API with lamejs
-        else {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const sourceNode = audioContext.createMediaStreamSource(stream);
-          
-          // Create a ScriptProcessorNode to process audio
-          audioProcessor = audioContext.createScriptProcessor(16384, 1, 1);
-          
-          // Initialize MP3 encoder with proper sample rate
-          mp3Encoder = new lamejs.Mp3Encoder(1, audioContext.sampleRate, 64);
-          
-          audioProcessor.onaudioprocess = (e) => {
-            if (!isRecording) return;
-            
-            // Get audio data from input channel
-            const samples = e.inputBuffer.getChannelData(0);
-            
-            // Convert float32 to int16
-            const sampleBuffer = new Int16Array(samples.length);
-            for (let i = 0; i < samples.length; i++) {
-              // Scale to int16 range and clamp to avoid overflow
-              sampleBuffer[i] = Math.max(-32768, Math.min(32767, samples[i] * 32768));
-            }
-            
-            // Encode to MP3
-            const mp3buf = mp3Encoder.encodeBuffer(sampleBuffer);
-            if (mp3buf.length > 0) {
-              mp3Data.push(mp3buf);
-            }
-          };
-          
-          // Connect the nodes
-          sourceNode.connect(audioProcessor);
-          audioProcessor.connect(audioContext.destination);
-          
-          // Handle stop for manual MP3 encoding
-          stopButton.addEventListener('click', function stopMP3Recording() {
-            if (audioProcessor) {
-              // Finalize the MP3 encoding
-              const mp3Final = mp3Encoder.flush();
-              if (mp3Final.length > 0) {
-                mp3Data.push(mp3Final);
-              }
-              
-              // Only download if we're not in the initial recording period
-              if (!isInitialRecordingPeriod) {
-                // Create blob from MP3 data
-                const blob = new Blob(mp3Data, { type: 'audio/mpeg' });
-                const customTitle = customFilenameInput.value.trim();
-                const audioFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio recording.${fileExtension}`;
-                
-                // Download the MP3 file
-                downloadBlob(blob, audioFileName);
-              }
-              
-              // Clean up audio processing
-              sourceNode.disconnect();
-              audioProcessor.disconnect();
-              audioProcessor = null;
-              
-              // Only remove this specific listener to avoid interfering with other stop button functionality
-              stopButton.removeEventListener('click', stopMP3Recording);
-            }
-          });
-        }
-
-        // Start recording using the appropriate method
-        if (isMP3Supported) {
-          mediaRecorder.start();
-        } else {
-          // For lamejs method, recording starts as soon as we set up the audio processor
-          console.log("Using lamejs for MP3 encoding (native MP3 recording not supported)");
-        }
-
-        // Set up Speech Recognition for live transcription.
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition,
-              recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-
-        function getSupportedLanguage(lang) {
-          // Get the list of supported languages from the dropdown.
-          const availableLanguages = Array.from(languageSelect.options).map(option => option.value);
-          // If the language exactly matches one of the options, return it.
-          if (availableLanguages.includes(lang)) {
-            return lang;
-          }
-          // Otherwise, try to match based on the two-letter code (e.g. "de" -> "de-DE")
-          const twoLetter = lang.split('-')[0];
-          const match = availableLanguages.find(l => l.startsWith(twoLetter));
-          return match || 'en-US';
-        }
-
-        const browserLang = navigator.language || 'en-US';
-        const selectedLang = getSupportedLanguage(browserLang);
-        recognition.lang = selectedLang;
-        languageSelect.value = selectedLang;
-        
-        // Set isRecording to true - now in global scope
-        isRecording = true;
-        let interimStartTime = null; // Tracks when an interim transcript begins.
-        const interimSpanId = 'interim-transcript';
-
-        recognition.onresult = event => {
-          let finalTranscript = '', interimTranscript = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const result = event.results[i][0].transcript;
-            event.results[i].isFinal ? finalTranscript += result : interimTranscript += result;
-          }
-
-          // If an interim result begins, note its start time.
-          if (interimTranscript && !interimStartTime) interimStartTime = Date.now();
-
-          // When a final result is available, insert it along with a timestamp.
-          if (finalTranscript) {
-            removeInterimTranscript();
-            if (interimStartTime) {
-              const elapsed = interimStartTime - recordingStartTime,
-                    minutes = Math.floor(elapsed / 60000),
-                    seconds = Math.floor((elapsed % 60000) / 1000),
-                    timestampDiv = document.createElement('div');
-              timestampDiv.style.fontWeight = 'bold';
-              timestampDiv.style.color = 'lightgray';
-              timestampDiv.textContent = `[[${padZero(minutes)}:${padZero(seconds)}]] `;
-              transcriptionElement.appendChild(timestampDiv);
-              interimStartTime = null;
-            }
-            transcriptionElement.appendChild(document.createTextNode(finalTranscript));
-            
-            // Call the visibility update function when new text is added via speech recognition
-            updateSummarizeButtonVisibility();
-          }
-
-          // Always update or add the interim transcript.
-          if (interimTranscript) {
-            removeInterimTranscript();
-            const interimSpan = document.createElement('span');
-            interimSpan.id = interimSpanId;
-            interimSpan.style.opacity = '0.5';
-            interimSpan.textContent = interimTranscript;
-            transcriptionElement.appendChild(interimSpan);
-          }
-        };
-
-        recognition.onerror = event => {
-          console.error('Speech recognition error:', event.error);
-          // Attempt to restart if still recording.
-          if (isRecording) {
-            recognition.stop();
-            recognition.start();
-          }
-        };
-        recognition.onend = () => { if (isRecording) recognition.start(); };
-        recognition.start();
-
-        // Update language if the user selects a new option.
-        languageSelect.addEventListener('change', () => {
-          recognition.stop();
-          recognition.lang = languageSelect.value;
-          if (isRecording) recognition.start();
-        });
-
-        // When the user clicks the stop button, stop both audio and transcription.
-        stopButton.addEventListener('click', () => {
-          // For MediaRecorder method
-          if (mediaRecorder && isRecording) {
-            mediaRecorder.stop();
-          }
-          
-          recognition.stop();
-          
-          // Stop all microphone tracks to completely release the microphone
-          if (window.microphoneStream) {
-            window.microphoneStream.getTracks().forEach(track => track.stop());
-          }
-          
-          if (isInitialRecordingPeriod) {
-            // If we're in the initial period, just stop recording without downloading
-            stopButton.style.display = 'none';
-            isRecording = false;
-            removeInterimTranscript();
-            showNotification('Recording stopped without saving files');
-          } else {
-            // Normal behavior - stop recording and download files
-            stopButton.style.display = 'none';
-            isRecording = false;
-
-            // Remove any lingering interim transcript.
-            removeInterimTranscript();
-
-            // Retrieve the (possibly edited) transcription.
-            const transcriptionHTML = transcriptionElement.innerHTML,
-                  transcriptionText = htmlToPlainText(transcriptionHTML),
-                  customTitle = customFilenameInput.value.trim(),
-                  transcriptFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} audio transcript.txt`,
-                  textBlob = new Blob([transcriptionText], { type: 'text/plain;charset=utf-8' });
-            downloadBlob(textBlob, transcriptFileName);
-            
-            // Also download high-quality transcription if available
-            const highQualityTranscription = document.getElementById('high-quality-transcription');
-            if (highQualityTranscription && highQualityTranscription.textContent.trim()) {
-              const highQualityText = highQualityTranscription.textContent,
-                    highQualityFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} high quality transcript.txt`,
-                    highQualityBlob = new Blob([highQualityText], { type: 'text/plain;charset=utf-8' });
-              downloadBlob(highQualityBlob, highQualityFileName);
-            }
-            
-            // Also download summary if available
-            const summaryContent = document.getElementById('summary-content');
-            if (summaryContent && 
-                summaryContent.textContent.trim()) {
-              const summaryText = summaryContent.textContent,
-                    summaryFileName = `${getDateTimePrefix(recordingStartTime)}${customTitle ? ' ' + customTitle : ''} summary.txt`,
-                    summaryBlob = new Blob([summaryText], { type: 'text/plain;charset=utf-8' });
-              downloadBlob(summaryBlob, summaryFileName);
-            }
-          }
-        });
-      }).catch(error => {
-        console.error('Error accessing microphone:', error);
-        alert("Microphone access denied or unavailable.");
-      });
-    }
-
-    // Utility: Trigger download of a blob with a given file name.
-    function downloadBlob(blob, fileName) {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-
-    // Utility: Remove the interim transcript span if it exists.
-    function removeInterimTranscript() {
-      const interim = document.getElementById('interim-transcript');
-      if (interim) interim.remove();
-    }
-
-    // Utility: Generate a date/time prefix for file names.
-    function getDateTimePrefix(time) {
-      const date = new Date(time),
-        year = date.getFullYear(),
-        month = String(date.getMonth() + 1).padStart(2, '0'),
-        day = String(date.getDate()).padStart(2, '0'),
-        hours = String(date.getHours()).padStart(2, '0'),
-        minutes = String(date.getMinutes()).padStart(2, '0'),
-        seconds = String(date.getSeconds()).padStart(2, '0');
-      return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-    }
-
-    // Utility: Convert HTML content to plain text while preserving line breaks.
-    function htmlToPlainText(html) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      function traverse(node) {
-        let text = '';
-        node.childNodes.forEach(child => {
-          if (child.nodeType === Node.TEXT_NODE) text += child.textContent;
-          else if (child.nodeType === Node.ELEMENT_NODE) {
-            if (['BR', 'DIV', 'P'].includes(child.tagName)) text += '\n';
-            text += traverse(child);
-          }
-        });
-        return text;
-      }
-      return traverse(tempDiv).replace(/\n\s*\n/g, '\n\n').trim();
-    }
-
-    // Utility: Pad single-digit numbers with a leading zero.
-    function padZero(num) { return num < 10 ? '0' + num : num; }
-
-    // Updated beforeunload handler that works with the global isRecording variable
-    window.addEventListener('beforeunload', event => {
-      if (isRecording && exitWarningEnabled) {
-        // Standard way to show a confirmation dialog before leaving the page
-        const message = 'A recording is still in progress. Are you sure you want to leave?';
-        event.preventDefault();
-        event.returnValue = message; 
-        return message;
-      }
-    });
-  </script>
-</body>
-
+    <script type="module" src="./src/main.js"></script>
+  </body>
 </html>

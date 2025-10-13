@@ -1,0 +1,180 @@
+name: Quality Assurance Agent
+on:
+  schedule:
+    - cron: "0 2 * * *"  # Daily at 2 AM UTC
+  workflow_dispatch:     # Manual trigger
+    inputs:
+      scope:
+        description: 'Scope of QA check'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - tests-only
+        - security-only
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  security-events: write
+
+jobs:
+  quality-assurance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure git
+        run: |
+          git config user.name "qa-agent[bot]"
+          git config user.email "qa-agent[bot]@users.noreply.github.com"
+
+      - name: Run comprehensive quality checks
+        id: quality-check
+        run: |
+          echo "## Quality Assurance Report" > qa-report.md
+          echo "Generated: $(date)" >> qa-report.md
+          echo "" >> qa-report.md
+          
+          # Test coverage
+          echo "### Test Coverage" >> qa-report.md
+          if npm test 2>&1 | tee test-output.log; then
+            echo "✅ All tests pass" >> qa-report.md
+            echo "TESTS_PASS=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Test failures detected" >> qa-report.md
+            echo "TESTS_PASS=false" >> $GITHUB_OUTPUT
+            echo "\`\`\`" >> qa-report.md
+            tail -20 test-output.log >> qa-report.md
+            echo "\`\`\`" >> qa-report.md
+          fi
+          echo "" >> qa-report.md
+          
+          # Quality checks
+          echo "### Code Quality" >> qa-report.md
+          if npm run check:all 2>&1 | tee check-output.log; then
+            echo "✅ All quality checks pass" >> qa-report.md
+            echo "QUALITY_PASS=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Quality issues detected" >> qa-report.md
+            echo "QUALITY_PASS=false" >> $GITHUB_OUTPUT
+            echo "\`\`\`" >> qa-report.md
+            tail -20 check-output.log >> qa-report.md
+            echo "\`\`\`" >> qa-report.md
+          fi
+          echo "" >> qa-report.md
+          
+          # Mutation testing (if requested)
+          if [ "${{ github.event.inputs.scope }}" = "full" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "### Mutation Testing" >> qa-report.md
+            if npm run mutation 2>&1 | tee mutation-output.log; then
+              echo "✅ Mutation testing passes" >> qa-report.md
+              echo "MUTATION_PASS=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Mutation testing issues" >> qa-report.md
+              echo "MUTATION_PASS=false" >> $GITHUB_OUTPUT
+              echo "\`\`\`" >> qa-report.md
+              tail -20 mutation-output.log >> qa-report.md
+              echo "\`\`\`" >> qa-report.md
+            fi
+            echo "" >> qa-report.md
+          fi
+          
+          # Security audit
+          echo "### Security Audit" >> qa-report.md
+          if npm audit --audit-level moderate 2>&1 | tee audit-output.log; then
+            echo "✅ No security vulnerabilities found" >> qa-report.md
+            echo "SECURITY_PASS=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Security vulnerabilities detected" >> qa-report.md
+            echo "SECURITY_PASS=false" >> $GITHUB_OUTPUT
+            echo "\`\`\`" >> qa-report.md
+            cat audit-output.log >> qa-report.md
+            echo "\`\`\`" >> qa-report.md
+          fi
+
+      - name: Create issue for failures
+        if: steps.quality-check.outputs.TESTS_PASS == 'false' || steps.quality-check.outputs.QUALITY_PASS == 'false' || steps.quality-check.outputs.SECURITY_PASS == 'false' || steps.quality-check.outputs.MUTATION_PASS == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('qa-report.md', 'utf8');
+            
+            const title = '🚨 Automated QA Issues Detected';
+            const body = `${report}
+
+## Recommended Actions
+
+**For test failures:**
+- Review failing tests and fix implementation
+- Ensure 100% test coverage is maintained
+- Run \`npm run test:watch\` for continuous feedback
+
+**For quality issues:**
+- Fix linting errors: \`npm run lint\`
+- Remove code duplication: \`npm run check:dup\`
+- Resolve circular dependencies: \`npm run check:cycles\`
+- Fix architectural boundaries: \`npm run check:boundaries\`
+
+**For security issues:**
+- Update vulnerable dependencies: \`npm update\`
+- Review \`npm audit\` output for manual fixes
+- Consider using \`npm audit fix\`
+
+## Agent Assignment
+Comment \`@claude\` to assign this task to an autonomous agent for automated resolution.
+
+---
+*Generated by QA Agent on ${new Date().toISOString()}*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['qa-issue', 'automation', 'priority:high']
+            });
+
+      - name: Post success summary
+        if: steps.quality-check.outputs.TESTS_PASS == 'true' && steps.quality-check.outputs.QUALITY_PASS == 'true' && steps.quality-check.outputs.SECURITY_PASS == 'true' && (steps.quality-check.outputs.MUTATION_PASS == 'true' || steps.quality-check.outputs.MUTATION_PASS == '')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Create a comment on the latest commit
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 1
+            });
+            
+            if (commits.length > 0) {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: commits[0].sha,
+                body: '✅ **QA Agent Report**: All quality checks pass!\n\n' +
+                      '- Tests: ✅ Passing\n' +
+                      '- Code Quality: ✅ Passing\n' +
+                      '- Security: ✅ No vulnerabilities\n' +
+                      '- Mutation Testing: ✅ Passing\n\n' +
+                      '*Automated quality assurance completed successfully.*'
+              });
+            }

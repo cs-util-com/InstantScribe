@@ -1,0 +1,13 @@
+{
+  "testRunner": "jest",
+  "reporters": ["clear-text", "json", "progress", "html"],
+  "mutate": ["src/**/*.js", "!src/**/*.test.js"],
+  "coverageAnalysis": "perTest",
+  "thresholds": { "high": 90, "low": 60, "break": 50 },
+  "jsonReporter": {
+    "fileName": "mutation-testing/reports/mutation-report.json"
+  },
+  "htmlReporter": {
+    "fileName": "mutation-testing/reports/html/index.html"
+  }
+}
