@@ -1,0 +1,136 @@
+name: Cursor Agent - Manual Trigger
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: cursor-agent-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  cursor-agent:
+    if: contains(github.event.comment.body, '/cursor start')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: Configure git
+        run: |
+          git config user.name "cursor-agent[bot]"
+          git config user.email "cursor-agent[bot]@users.noreply.github.com"
+
+      - name: Extract issue details
+        id: issue-details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const issueBody = issue.body || '';
+            const issueTitle = issue.title || '';
+            const issueNumber = issue.number;
+            
+            core.setOutput('title', issueTitle);
+            core.setOutput('body', issueBody);
+            core.setOutput('number', issueNumber);
+            
+            return {
+              title: issueTitle,
+              body: issueBody,
+              number: issueNumber
+            };
+
+      - name: Run Cursor Agent
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          # Create branch name
+          BRANCH_NAME="agent/${{ steps.issue-details.outputs.number }}-$(echo '${{ steps.issue-details.outputs.title }}' | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | sed 's/--*/-/g' | sed 's/^-\|-$//g' | cut -c1-50)"
+          
+          # Run cursor agent in non-interactive mode
+          cursor-agent -p "
+          I need to implement the requirements described in issue #${{ steps.issue-details.outputs.number }}.
+
+          Issue Title: ${{ steps.issue-details.outputs.title }}
+          
+          Issue Description:
+          ${{ steps.issue-details.outputs.body }}
+
+          Please:
+          1. Create a new branch named: ${BRANCH_NAME}
+          2. Analyze the existing codebase structure in CLAUDE.md
+          3. Implement the requirements following the coding standards
+          4. Write comprehensive tests (aim for 100% coverage)
+          5. Run all quality checks (npm run check:all)
+          6. Ensure tests pass (npm test)
+          7. Commit changes with clear messages
+          8. Push the branch
+          9. Open a pull request referencing issue #${{ steps.issue-details.outputs.number }}
+
+          Important constraints:
+          - Must maintain 100% test coverage
+          - Must pass all quality gates
+          - Follow existing code patterns
+          - Use the project structure defined in CLAUDE.md
+          - Make incremental commits with descriptive messages
+
+          Test commands to run:
+          - npm test (unit tests)
+          - npm run check:all (quality checks)
+          - npm run validate:all (complete validation)
+          " --output-format json
+
+      - name: Post completion status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const issueNumber = context.issue.number;
+            
+            let message;
+            if (status === 'success') {
+              message = '🎯 **Cursor Agent Task Completed**\n\n' +
+                       'The Cursor agent has processed this issue. ' +
+                       'Check for a new pull request or branch updates.\n\n' +
+                       '**Validation checklist:**\n' +
+                       '- [ ] Tests pass (`npm test`)\n' +
+                       '- [ ] Quality checks pass (`npm run check:all`)\n' +
+                       '- [ ] Code follows project standards\n' +
+                       '- [ ] PR has clear description and references this issue';
+            } else {
+              message = '❌ **Cursor Agent Task Failed**\n\n' +
+                       'The Cursor agent encountered an error. Check the workflow logs.\n\n' +
+                       '**To retry:** Comment `/cursor start` again.';
+            }
+            
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });

@@ -1,0 +1,99 @@
+name: CI
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - name: Unit & property tests
+        run: npm test
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+  quality:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - name: Lint check
+        run: npm run lint
+      - name: Duplication guard (jscpd)
+        run: npm run check:dup
+      - name: Cycle guard (madge)
+        run: npm run check:cycles
+      - name: Boundaries (dependency-cruiser)
+        run: npm run check:boundaries
+      - name: Mutation Test
+        run: npm run mutation
+      - name: Upload mutation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: mutation-testing/reports/
+
+  # Agent-created PR validation
+  agent-pr-check:
+    if: github.event_name == 'pull_request' && contains(github.head_ref, 'agent/')
+    runs-on: ubuntu-latest
+    needs: [test, quality]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate agent PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prTitle = context.payload.pull_request?.title || '';
+            const prBody = context.payload.pull_request?.body || '';
+            const branch = context.payload.pull_request?.head?.ref || '';
+            
+            let validationPassed = true;
+            let issues = [];
+            
+            // Validate PR has issue reference
+            if (!prBody.match(/#\d+/) && !prTitle.match(/#\d+/)) {
+              issues.push('❌ PR must reference an issue number');
+              validationPassed = false;
+            }
+            
+            // Check if PR template was used
+            if (!prBody.includes('## Description') || !prBody.includes('## Testing')) {
+              issues.push('❌ PR template should be used');
+              validationPassed = false;
+            }
+            
+            // Post validation results
+            const status = validationPassed ? '✅ Agent PR Validation Passed' : '❌ Agent PR Validation Failed';
+            let comment = `## ${status}\n\n`;
+            
+            if (validationPassed) {
+              comment += 'This agent-created PR meets all validation criteria:\n' +
+                        '- ✅ References an issue\n' +
+                        '- ✅ Uses PR template\n' +
+                        '- ✅ All CI checks pass\n\n' +
+                        '**Ready for human review!**';
+            } else {
+              comment += 'Issues found:\n' + issues.map(issue => `- ${issue}`).join('\n') + '\n\n' +
+                        'Please address these issues before merging.';
+            }
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
