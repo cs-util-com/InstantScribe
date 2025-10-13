@@ -38,6 +38,18 @@ describe('recording helpers', () => {
     window.SpeechRecognition = originalSpeech;
   });
 
+  test('checkRecorderSupport returns false when window is missing', () => {
+    const originalWindow = global.window;
+    try {
+      // eslint-disable-next-line no-global-assign
+      window = undefined;
+      expect(checkRecorderSupport()).toBe(false);
+    } finally {
+      // eslint-disable-next-line no-global-assign
+      window = originalWindow;
+    }
+  });
+
   test('downloadBlob appends anchor and revokes URL', () => {
     const blob = new Blob(['test'], { type: 'text/plain' });
     const originalCreate = URL.createObjectURL;
@@ -58,5 +70,12 @@ describe('recording helpers', () => {
     URL.revokeObjectURL = originalRevoke;
     appendSpy.mockRestore();
     removeSpy.mockRestore();
+  });
+
+  test('downloadBlob exits when blob is missing', () => {
+    const appendSpy = jest.spyOn(document.body, 'appendChild');
+    downloadBlob(null, 'file.txt');
+    expect(appendSpy).not.toHaveBeenCalled();
+    appendSpy.mockRestore();
   });
 });

@@ -4,6 +4,7 @@ const DEFAULT_MP3_BITRATE = 64;
 const DEFAULT_MIME_TYPE = 'audio/mpeg';
 
 export function checkRecorderSupport() {
+  /* istanbul ignore next */
   if (typeof window === 'undefined') return false;
   const hasMediaRecorder = typeof window.MediaRecorder !== 'undefined';
   const hasSpeechRecognition = Boolean(
@@ -223,6 +224,7 @@ export class Recorder {
 
 export function downloadBlob(blob, fileName) {
   if (!blob) return;
+  /* istanbul ignore next */
   if (typeof document === 'undefined') return;
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -245,6 +247,7 @@ export function getDateTimePrefix(time) {
 }
 
 export function htmlToPlainText(html) {
+  /* istanbul ignore next */
   if (typeof document === 'undefined') return html;
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;

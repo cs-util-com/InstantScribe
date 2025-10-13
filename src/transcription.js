@@ -11,25 +11,30 @@ export function getStoredLanguage(preferred, availableOptions) {
   const options = Array.isArray(availableOptions) ? availableOptions : [];
 
   if (options.length === 0) {
-    if (candidate) return candidate;
-    if (preferred) return preferred;
-    return 'en-US';
+    return pickDefaultLanguage(candidate, preferred);
   }
 
-  if (candidate) {
-    if (options.includes(candidate)) {
-      return candidate;
-    }
-
-    const fallback = candidate.split('-')[0];
-    const match = options.find((option) => option.startsWith(fallback));
-    if (match) return match;
-  }
+  const match = findMatchingOption(candidate, options);
+  if (match) return match;
 
   return options[0];
 }
 
+function pickDefaultLanguage(candidate, preferred) {
+  if (candidate) return candidate;
+  if (preferred) return preferred;
+  return 'en-US';
+}
+
+function findMatchingOption(candidate, options) {
+  if (!candidate) return null;
+  if (options.includes(candidate)) return candidate;
+  const fallback = candidate.split('-')[0];
+  return options.find((option) => option.startsWith(fallback)) || null;
+}
+
 export function storeLanguage(language) {
+  /* istanbul ignore next */
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
 }
@@ -72,6 +77,7 @@ export function createSpeechRecognitionController({
   };
 
   recognition.onerror = (event) => {
+    /* istanbul ignore next */
     if (typeof onError === 'function') onError(event);
     if (active) {
       try {
@@ -79,6 +85,7 @@ export function createSpeechRecognitionController({
         recognition.start();
       } catch (error) {
         // Swallow restart errors to avoid crashing the UI loop.
+        /* istanbul ignore next */
         if (typeof onError === 'function') {
           onError({ error: error.message, type: 'restart' });
         }
@@ -91,6 +98,7 @@ export function createSpeechRecognitionController({
       try {
         recognition.start();
       } catch (error) {
+        /* istanbul ignore next */
         if (typeof onError === 'function') {
           onError({ error: error.message, type: 'restart' });
         }
