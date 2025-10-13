@@ -5,7 +5,7 @@ This document defines how to use coverage-ignore comments in this repository. It
 ## TL;DR
 
 - `/* istanbul ignore next */` excludes the **next AST node** from coverage.
-- Use ignores **sparingly** and **only** for code that is *truly* untestable or irrelevant to product behavior.
+- Use ignores **sparingly** and **only** for code that is _truly_ untestable or irrelevant to product behavior.
 - Every ignore **must include a reason** right next to it.
 - Prefer tests, refactors, or config-level excludes over in-source ignores.
 
@@ -30,24 +30,33 @@ Use an ignore only when exercising the code in automated tests is impractical or
 
 1. **Unreachable defensive code**  
    Exhaustive switch fallthroughs, invariant guards, or “should never happen” paths that exist purely as safety nets.
+
    ```ts
-   type Kind = "A" | "B"
-   function assertNever(x: never): never { throw new Error("unreachable") }
+   type Kind = 'A' | 'B';
+   function assertNever(x: never): never {
+     throw new Error('unreachable');
+   }
 
    switch (kind) {
-     case "A": handleA(); break
-     case "B": handleB(); break
+     case 'A':
+       handleA();
+       break;
+     case 'B':
+       handleB();
+       break;
      /* istanbul ignore next -- defensive, unreachable by construction */
-     default:  assertNever(kind as never)
+     default:
+       assertNever(kind as never);
    }
+   ```
 
 2. **Platform-/environment-specific branches**
    Behavior that cannot be exercised in CI or across all supported OSes without unrealistic setups.
 
    ```ts
-   if (process.platform === "win32") {
+   if (process.platform === 'win32') {
      /* istanbul ignore next -- requires native Windows console; not in CI image */
-     enableWindowsConsoleMode()
+     enableWindowsConsoleMode();
    }
    ```
 
@@ -61,11 +70,11 @@ Use an ignore only when exercising the code in automated tests is impractical or
 
 ## When it is **not** acceptable
 
-* To boost coverage percentages or hide missing tests.
-* On **business logic** or any behavior affecting users.
-* Broadly before `if`/`switch`/function declarations that mask multiple branches or large regions.
-* As a substitute for a **small refactor** that would make testing feasible (e.g., splitting out side effects, injecting dependencies).
-* For convenience when a test is mildly inconvenient to write (e.g., mocking a timer or a rejected promise).
+- To boost coverage percentages or hide missing tests.
+- On **business logic** or any behavior affecting users.
+- Broadly before `if`/`switch`/function declarations that mask multiple branches or large regions.
+- As a substitute for a **small refactor** that would make testing feasible (e.g., splitting out side effects, injecting dependencies).
+- For convenience when a test is mildly inconvenient to write (e.g., mocking a timer or a rejected promise).
 
 ---
 
@@ -97,10 +106,10 @@ Use an ignore only when exercising the code in automated tests is impractical or
 
 ## Preferred alternatives to ignores
 
-* **Write a focused test**: Use dependency injection, seam extraction, or a small adapter to isolate side effects.
-* **Refactor for testability**: Split logic from I/O; return values instead of printing; pass a clock/random source.
-* **Use config excludes for generated code**: Keep production logic fully measured.
-* **Switch directive, not scope**: Prefer `ignore if/else` over `ignore next` when only one branch is untestable.
+- **Write a focused test**: Use dependency injection, seam extraction, or a small adapter to isolate side effects.
+- **Refactor for testability**: Split logic from I/O; return values instead of printing; pass a clock/random source.
+- **Use config excludes for generated code**: Keep production logic fully measured.
+- **Switch directive, not scope**: Prefer `ignore if/else` over `ignore next` when only one branch is untestable.
 
 ---
 
@@ -135,14 +144,14 @@ Jest example (if using V8 coverage):
 // jest.config.js
 module.exports = {
   collectCoverage: true,
-  coverageProvider: "v8",
+  coverageProvider: 'v8',
   coveragePathIgnorePatterns: [
-    "/node_modules/",
-    "/dist/",
-    "/build/",
-    "\\.gen\\."
-  ]
-}
+    '/node_modules/',
+    '/dist/',
+    '/build/',
+    '\\.gen\\.',
+  ],
+};
 ```
 
 > Align comment style with the active provider: `istanbul` for Babel/nyc instrumentation; `c8` for V8.
@@ -155,28 +164,32 @@ module.exports = {
 
 ```js
 // scripts/check-coverage-ignores.mjs
-import { readFileSync } from "node:fs";
-import { globby } from "globby";
+import { readFileSync } from 'node:fs';
+import { globby } from 'globby';
 
-const files = await globby(["src/**/*.{ts,tsx,js,jsx}"], { gitignore: true });
+const files = await globby(['src/**/*.{ts,tsx,js,jsx}'], { gitignore: true });
 
 const offenders = [];
 const re = /(istanbul|c8)\s+ignore\s+(next|if|else|file)/;
 
 for (const f of files) {
-  const lines = readFileSync(f, "utf8").split("\n");
+  const lines = readFileSync(f, 'utf8').split('\n');
   for (let i = 0; i < lines.length; i++) {
     if (re.test(lines[i])) {
       const hasReason =
-        /--\s*[A-Za-z0-9]/.test(lines[i]) || (i > 0 && /--\s*[A-Za-z0-9]/.test(lines[i - 1]));
-      if (!hasReason) offenders.push(`${f}:${i + 1}: missing reason after ignore comment`);
+        /--\s*[A-Za-z0-9]/.test(lines[i]) ||
+        (i > 0 && /--\s*[A-Za-z0-9]/.test(lines[i - 1]));
+      if (!hasReason)
+        offenders.push(`${f}:${i + 1}: missing reason after ignore comment`);
     }
   }
 }
 
 if (offenders.length) {
-  console.error("Coverage ignore comments require an inline reason (use `-- reason`).");
-  console.error(offenders.join("\n"));
+  console.error(
+    'Coverage ignore comments require an inline reason (use `-- reason`).'
+  );
+  console.error(offenders.join('\n'));
   process.exit(1);
 }
 ```
@@ -200,7 +213,13 @@ Optional ESLint guard (warn on any usage):
     "no-restricted-comments": [
       "warn",
       {
-        "terms": ["istanbul ignore next", "istanbul ignore if", "istanbul ignore else", "istanbul ignore file", "c8 ignore next"],
+        "terms": [
+          "istanbul ignore next",
+          "istanbul ignore if",
+          "istanbul ignore else",
+          "istanbul ignore file",
+          "c8 ignore next"
+        ],
         "location": "anywhere",
         "message": "Coverage ignore detected: add `-- reason` and ensure policy compliance."
       }
@@ -217,11 +236,10 @@ Optional ESLint guard (warn on any usage):
 
 ```ts
 if (cacheEnabled) {
-  warmCache()
-}
-/* istanbul ignore else -- cold path is a telemetry-only fallback */
-else {
-  coldStartWithTelemetry()
+  warmCache();
+} else {
+  /* istanbul ignore else -- cold path is a telemetry-only fallback */
+  coldStartWithTelemetry();
 }
 ```
 
@@ -231,7 +249,7 @@ else {
 // Calls a native API that only exists on macOS ≥ 13:
 if (isDarwin13Plus()) {
   /* istanbul ignore next -- native API unavailable in CI runners */
-  enableFancyTerminal()
+  enableFancyTerminal();
 }
 ```
 
@@ -252,18 +270,15 @@ nyc.exclude += ["src/generated/**"]  // in package.json nyc config
    ```
 
 2. **Classify**
-
-   * ✅ Legitimate (add/verify reason, minimize scope)
-   * 🟡 Replaceable (write a test or refactor)
-   * 🔴 Remove/ban (business logic, overly broad)
+   - ✅ Legitimate (add/verify reason, minimize scope)
+   - 🟡 Replaceable (write a test or refactor)
+   - 🔴 Remove/ban (business logic, overly broad)
 
 3. **Refactor & test**
-
-   * Extract logic from side effects; inject collaborators; mock clocks/randomness.
+   - Extract logic from side effects; inject collaborators; mock clocks/randomness.
 
 4. **Guard**
-
-   * Add CI script and ESLint rule to prevent regressions.
+   - Add CI script and ESLint rule to prevent regressions.
 
 ---
 
@@ -282,7 +297,7 @@ A: Use one approach consistently. If switching to V8 coverage, update directives
 
 ## Checklist for new code
 
-* [ ] Coverage added for changed behavior.
-* [ ] No new `istanbul`/`c8` ignores **unless** justified and minimal.
-* [ ] Each ignore has `-- reason` and (optionally) a ticket reference.
-* [ ] Generated/vendor code excluded via config, not inline comments.
+- [ ] Coverage added for changed behavior.
+- [ ] No new `istanbul`/`c8` ignores **unless** justified and minimal.
+- [ ] Each ignore has `-- reason` and (optionally) a ticket reference.
+- [ ] Generated/vendor code excluded via config, not inline comments.

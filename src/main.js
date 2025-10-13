@@ -1,4 +1,4 @@
-/* istanbul ignore file */
+/* istanbul ignore file -- browser-only DOM orchestration pending integration tests */
 
 import {
   Recorder,

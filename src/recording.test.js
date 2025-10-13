@@ -25,29 +25,21 @@ describe('recording helpers', () => {
   });
 
   test('checkRecorderSupport reflects availability of APIs', () => {
-    const originalMediaRecorder = window.MediaRecorder;
-    const originalSpeech = window.SpeechRecognition;
-    window.MediaRecorder = undefined;
-    window.SpeechRecognition = function MockSpeech() {};
-    expect(checkRecorderSupport()).toBe(false);
+    const unsupported = {
+      MediaRecorder: undefined,
+      SpeechRecognition: function MockSpeech() {},
+    };
+    expect(checkRecorderSupport(unsupported)).toBe(false);
 
-    window.MediaRecorder = function MockRecorder() {};
-    expect(checkRecorderSupport()).toBe(true);
-
-    window.MediaRecorder = originalMediaRecorder;
-    window.SpeechRecognition = originalSpeech;
+    const supported = {
+      MediaRecorder: function MockRecorder() {},
+      SpeechRecognition: function MockSpeech() {},
+    };
+    expect(checkRecorderSupport(supported)).toBe(true);
   });
 
-  test('checkRecorderSupport returns false when window is missing', () => {
-    const originalWindow = global.window;
-    try {
-      // eslint-disable-next-line no-global-assign
-      window = undefined;
-      expect(checkRecorderSupport()).toBe(false);
-    } finally {
-      // eslint-disable-next-line no-global-assign
-      window = originalWindow;
-    }
+  test('checkRecorderSupport returns false when window-like object is missing', () => {
+    expect(checkRecorderSupport(undefined)).toBe(false);
   });
 
   test('downloadBlob appends anchor and revokes URL', () => {
@@ -77,5 +69,26 @@ describe('recording helpers', () => {
     downloadBlob(null, 'file.txt');
     expect(appendSpy).not.toHaveBeenCalled();
     appendSpy.mockRestore();
+  });
+
+  test('downloadBlob exits when DOM APIs are unavailable', () => {
+    const blob = new Blob(['test'], { type: 'text/plain' });
+    const env = {
+      document: null,
+      URL: {
+        createObjectURL: jest.fn(),
+        revokeObjectURL: jest.fn(),
+      },
+    };
+
+    downloadBlob(blob, 'file.txt', env);
+
+    expect(env.URL.createObjectURL).not.toHaveBeenCalled();
+    expect(env.URL.revokeObjectURL).not.toHaveBeenCalled();
+  });
+
+  test('htmlToPlainText returns original value when document is unavailable', () => {
+    const html = '<p>Hello</p>';
+    expect(htmlToPlainText(html, { document: null })).toBe(html);
   });
 });

@@ -33,10 +33,12 @@ function findMatchingOption(candidate, options) {
   return options.find((option) => option.startsWith(fallback)) || null;
 }
 
-export function storeLanguage(language) {
-  /* istanbul ignore next */
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+export function storeLanguage(
+  language,
+  storage = typeof window !== 'undefined' ? window.localStorage : undefined
+) {
+  if (!storage) return;
+  storage.setItem(LANGUAGE_STORAGE_KEY, language);
 }
 
 export function createSpeechRecognitionController({
@@ -77,7 +79,6 @@ export function createSpeechRecognitionController({
   };
 
   recognition.onerror = (event) => {
-    /* istanbul ignore next */
     if (typeof onError === 'function') onError(event);
     if (active) {
       try {
@@ -85,7 +86,6 @@ export function createSpeechRecognitionController({
         recognition.start();
       } catch (error) {
         // Swallow restart errors to avoid crashing the UI loop.
-        /* istanbul ignore next */
         if (typeof onError === 'function') {
           onError({ error: error.message, type: 'restart' });
         }
@@ -98,7 +98,6 @@ export function createSpeechRecognitionController({
       try {
         recognition.start();
       } catch (error) {
-        /* istanbul ignore next */
         if (typeof onError === 'function') {
           onError({ error: error.message, type: 'restart' });
         }

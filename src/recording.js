@@ -3,17 +3,18 @@ const DEFAULT_AUDIO_BITRATE = 128000;
 const DEFAULT_MP3_BITRATE = 64;
 const DEFAULT_MIME_TYPE = 'audio/mpeg';
 
-export function checkRecorderSupport() {
-  /* istanbul ignore next */
-  if (typeof window === 'undefined') return false;
-  const hasMediaRecorder = typeof window.MediaRecorder !== 'undefined';
+export function checkRecorderSupport(
+  windowLike = typeof window !== 'undefined' ? window : undefined
+) {
+  if (!windowLike) return false;
+  const hasMediaRecorder = typeof windowLike.MediaRecorder !== 'undefined';
   const hasSpeechRecognition = Boolean(
-    window.SpeechRecognition || window.webkitSpeechRecognition
+    windowLike.SpeechRecognition || windowLike.webkitSpeechRecognition
   );
   return hasMediaRecorder && hasSpeechRecognition;
 }
 
-/* istanbul ignore next */
+/* istanbul ignore next -- relies on browser MediaRecorder and Web Audio APIs; exercising end-to-end requires manual testing */
 export class Recorder {
   constructor({
     bufferSize = DEFAULT_BUFFER_SIZE,
@@ -222,17 +223,32 @@ export class Recorder {
   }
 }
 
-export function downloadBlob(blob, fileName) {
-  if (!blob) return;
-  /* istanbul ignore next */
-  if (typeof document === 'undefined') return;
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
+export function downloadBlob(blob, fileName, environment = {}) {
+  const doc =
+    environment.document !== undefined
+      ? environment.document
+      : typeof document !== 'undefined'
+        ? document
+        : null;
+  const url =
+    environment.URL !== undefined
+      ? environment.URL
+      : typeof URL !== 'undefined'
+        ? URL
+        : null;
+
+  if (!blob || !doc || !url) return;
+
+  const target = doc.body ?? doc.documentElement;
+  if (!target) return;
+
+  const link = doc.createElement('a');
+  link.href = url.createObjectURL(blob);
   link.download = fileName;
-  document.body.appendChild(link);
+  target.appendChild(link);
   link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
+  target.removeChild(link);
+  url.revokeObjectURL(link.href);
 }
 
 export function getDateTimePrefix(time) {
@@ -246,10 +262,12 @@ export function getDateTimePrefix(time) {
   return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
 }
 
-export function htmlToPlainText(html) {
-  /* istanbul ignore next */
-  if (typeof document === 'undefined') return html;
-  const tempDiv = document.createElement('div');
+export function htmlToPlainText(
+  html,
+  { document: doc = typeof document !== 'undefined' ? document : null } = {}
+) {
+  if (!doc) return html;
+  const tempDiv = doc.createElement('div');
   tempDiv.innerHTML = html;
 
   function traverse(node) {

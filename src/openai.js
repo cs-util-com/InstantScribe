@@ -1,4 +1,4 @@
-/* istanbul ignore file */
+/* istanbul ignore file -- depends on live OpenAI SDK calls not executed in Jest */
 
 import OpenAI from 'https://esm.sh/openai@~4.86.2?target=es2020';
 

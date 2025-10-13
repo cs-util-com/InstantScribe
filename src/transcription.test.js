@@ -74,6 +74,20 @@ describe('transcription utilities', () => {
     expect(window.localStorage.getItem('transcription_language')).toBe('it-IT');
   });
 
+  test('storeLanguage uses injected storage when provided', () => {
+    const storage = { setItem: jest.fn() };
+    storeLanguage('es-ES', storage);
+    expect(storage.setItem).toHaveBeenCalledWith(
+      'transcription_language',
+      'es-ES'
+    );
+  });
+
+  test('storeLanguage no-ops when storage is unavailable', () => {
+    storeLanguage('es-ES', null);
+    expect(window.localStorage.getItem('transcription_language')).toBeNull();
+  });
+
   test('getStoredLanguage handles missing window object', () => {
     const originalWindow = global.window;
     try {
