@@ -158,6 +158,9 @@
       let mp3Data = []; // For lamejs encoding
       let droppedFile = null; // Store the dropped audio file
       let isInitialRecordingPeriod = true; // Track if we're in the initial recording period
+      const LANGUAGE_STORAGE_KEY = 'transcription_language';
+      let savedLanguagePreference =
+        localStorage.getItem(LANGUAGE_STORAGE_KEY) || '';
 
       // Move function out of DOMContentLoaded to make it globally accessible
       function updateSummarizeButtonVisibility() {
@@ -220,10 +223,20 @@
         const transcriptionContainer = document.getElementById(
           'transcription-container'
         );
+        const languageSelect = document.getElementById('language-select');
 
         // Set the saved API key if available
         if (apiKey) {
           apiKeyField.value = apiKey;
+        }
+
+        if (savedLanguagePreference) {
+          const optionExists = Array.from(languageSelect.options).some(
+            (option) => option.value === savedLanguagePreference
+          );
+          if (optionExists) {
+            languageSelect.value = savedLanguagePreference;
+          }
         }
 
         // Run initially
@@ -876,13 +889,16 @@
               const match = availableLanguages.find((l) =>
                 l.startsWith(twoLetter)
               );
-              return match || 'en-US';
+              return match || availableLanguages[0] || 'en-US';
             }
 
             const browserLang = navigator.language || 'en-US';
-            const selectedLang = getSupportedLanguage(browserLang);
-            recognition.lang = selectedLang;
-            languageSelect.value = selectedLang;
+            const initialLanguage = savedLanguagePreference
+              ? getSupportedLanguage(savedLanguagePreference)
+              : getSupportedLanguage(browserLang);
+
+            recognition.lang = initialLanguage;
+            languageSelect.value = initialLanguage;
 
             // Set isRecording to true - now in global scope
             isRecording = true;
@@ -951,6 +967,11 @@
 
             // Update language if the user selects a new option.
             languageSelect.addEventListener('change', () => {
+              savedLanguagePreference = languageSelect.value;
+              localStorage.setItem(
+                LANGUAGE_STORAGE_KEY,
+                savedLanguagePreference
+              );
               recognition.stop();
               recognition.lang = languageSelect.value;
               if (isRecording) recognition.start();
