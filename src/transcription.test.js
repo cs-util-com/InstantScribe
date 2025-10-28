@@ -5,9 +5,14 @@ import {
   transcribeAudioFile,
 } from './transcription.js';
 import { transcribeFile } from './openai.js';
+import { executeTranscriptionPipeline } from './transcription/pipeline.js';
 
 jest.mock('./openai.js', () => ({
   transcribeFile: jest.fn(),
+}));
+
+jest.mock('./transcription/pipeline.js', () => ({
+  executeTranscriptionPipeline: jest.fn(),
 }));
 
 describe('transcription utilities', () => {
@@ -223,11 +228,29 @@ describe('transcription utilities', () => {
     controller.stop();
   });
 
-  test('transcribeAudioFile proxies to openai module', async () => {
+  test('transcribeAudioFile delegates to pipeline first', async () => {
     const file = new File(['data'], 'audio.mp3', { type: 'audio/mpeg' });
-    transcribeFile.mockResolvedValue('transcribed');
+    executeTranscriptionPipeline.mockResolvedValue('chunked');
     const result = await transcribeAudioFile({ file, language: 'en' });
+
+    expect(executeTranscriptionPipeline).toHaveBeenCalled();
+    expect(result).toBe('chunked');
+    expect(transcribeFile).not.toHaveBeenCalled();
+  });
+
+  test('transcribeAudioFile falls back to direct call when pipeline fails', async () => {
+    const file = new File(['data'], 'audio.mp3', { type: 'audio/mpeg' });
+    executeTranscriptionPipeline.mockRejectedValueOnce(new Error('fail'));
+    executeTranscriptionPipeline.mockRejectedValueOnce(new Error('fail again'));
+    executeTranscriptionPipeline.mockRejectedValueOnce(
+      new Error('still failing')
+    );
+    transcribeFile.mockResolvedValue('direct');
+
+    const result = await transcribeAudioFile({ file, language: 'en' });
+
+    expect(executeTranscriptionPipeline).toHaveBeenCalled();
     expect(transcribeFile).toHaveBeenCalledWith({ file, language: 'en' });
-    expect(result).toBe('transcribed');
+    expect(result).toBe('direct');
   });
 });

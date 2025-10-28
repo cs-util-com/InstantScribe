@@ -1,4 +1,7 @@
 import { transcribeFile } from './openai.js';
+import { executeTranscriptionPipeline } from './transcription/pipeline.js';
+import { DEFAULT_VAD_CONFIG } from './vad/silero.js';
+import { DEFAULT_CHUNK_CONFIG } from './transcription/chunking.js';
 
 const LANGUAGE_STORAGE_KEY = 'transcription_language';
 
@@ -131,6 +134,54 @@ export function createSpeechRecognitionController({
   };
 }
 
+const FALLBACK_ATTEMPTS = 2;
+
+function adjustChunkConfig(config) {
+  return {
+    ...config,
+    maxChunkSec: Math.max(300, Math.floor(config.maxChunkSec / 2)),
+    maxChunkBytes: Math.max(
+      8 * 1024 * 1024,
+      Math.floor(config.maxChunkBytes * 0.75)
+    ),
+  };
+}
+
+async function runPipelineWithRetries({ file, language, attempts }) {
+  const baseChunkConfig = { ...DEFAULT_CHUNK_CONFIG };
+  let attempt = 0;
+  let currentConfig = baseChunkConfig;
+  let lastError = null;
+
+  while (attempt <= attempts) {
+    try {
+      return await executeTranscriptionPipeline({
+        file,
+        language,
+        transcribe: ({ file: chunkFile, language: chunkLanguage, prompt }) =>
+          transcribeFile({ file: chunkFile, language: chunkLanguage, prompt }),
+        vadConfig: DEFAULT_VAD_CONFIG,
+        chunkConfig: currentConfig,
+      });
+    } catch (error) {
+      lastError = error;
+      attempt += 1;
+      currentConfig = adjustChunkConfig(currentConfig);
+    }
+  }
+
+  throw lastError || new Error('Transcription pipeline failed');
+}
+
 export async function transcribeAudioFile({ file, language }) {
-  return transcribeFile({ file, language });
+  try {
+    return await runPipelineWithRetries({
+      file,
+      language,
+      attempts: FALLBACK_ATTEMPTS,
+    });
+  } catch (error) {
+    console.warn('Falling back to single-file transcription', error);
+    return transcribeFile({ file, language });
+  }
 }
