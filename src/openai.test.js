@@ -53,6 +53,7 @@ describe('openai helpers', () => {
       file,
       model: 'gpt-4o-transcribe',
       language: 'en',
+      prompt: undefined,
     });
   });
 
@@ -69,6 +70,7 @@ describe('openai helpers', () => {
       file,
       model: 'custom-model',
       language: 'de',
+      prompt: undefined,
     });
   });
 

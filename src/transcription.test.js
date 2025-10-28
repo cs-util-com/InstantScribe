@@ -3,6 +3,7 @@ import {
   storeLanguage,
   createSpeechRecognitionController,
   transcribeAudioFile,
+  __testables,
 } from './transcription.js';
 import { transcribeFile } from './openai.js';
 
@@ -227,7 +228,126 @@ describe('transcription utilities', () => {
     const file = new File(['data'], 'audio.mp3', { type: 'audio/mpeg' });
     transcribeFile.mockResolvedValue('transcribed');
     const result = await transcribeAudioFile({ file, language: 'en' });
-    expect(transcribeFile).toHaveBeenCalledWith({ file, language: 'en' });
+    expect(transcribeFile).toHaveBeenCalledWith({
+      file,
+      language: 'en',
+      prompt: undefined,
+    });
     expect(result).toBe('transcribed');
+  });
+
+  test('detectAndNormalizeSegments returns empty array on detector failure', () => {
+    const { detectAndNormalizeSegments } = __testables;
+    const decoded = {
+      pcm: new Float32Array(10),
+      sampleRate: 16000,
+      durationMs: 1000,
+    };
+    const detector = () => {
+      throw new Error('fail');
+    };
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const segments = detectAndNormalizeSegments(decoded, detector);
+    warnSpy.mockRestore();
+    expect(segments).toEqual([]);
+  });
+
+  test('buildChunkPlan falls back to single chunk when segmentation empty', () => {
+    const { buildChunkPlan } = __testables;
+    const decoded = { durationMs: 5000 };
+    const plan = buildChunkPlan(decoded, []);
+    expect(plan).toHaveLength(1);
+    expect(plan[0]).toMatchObject({ startMs: 0, endMs: 5000 });
+  });
+
+  test('hasBrowserAudioSupport returns true when APIs exist', () => {
+    const { hasBrowserAudioSupport } = __testables;
+    const originalAudio = window.AudioContext;
+    const originalOffline = window.OfflineAudioContext;
+    window.AudioContext = function MockContext() {};
+    window.OfflineAudioContext = function MockOffline() {};
+    expect(hasBrowserAudioSupport()).toBe(true);
+    window.AudioContext = originalAudio;
+    window.OfflineAudioContext = originalOffline;
+  });
+
+  test('detectAndNormalizeSegments uses detector results', () => {
+    const { detectAndNormalizeSegments } = __testables;
+    const decoded = {
+      pcm: new Float32Array(16000),
+      sampleRate: 16000,
+      durationMs: 4000,
+    };
+    const detector = () => [
+      { startMs: 0, endMs: 1200 },
+      { startMs: 1500, endMs: 2500 },
+    ];
+    const segments = detectAndNormalizeSegments(decoded, detector);
+    expect(segments.length).toBeGreaterThan(0);
+  });
+
+  test('buildChunkPlan groups normalized segments into chunks', () => {
+    const { buildChunkPlan } = __testables;
+    const decoded = { durationMs: 120000 };
+    const plan = buildChunkPlan(decoded, [
+      { startMs: 0, endMs: 30000 },
+      { startMs: 31000, endMs: 60000 },
+      { startMs: 70000, endMs: 90000 },
+    ]);
+    expect(plan.length).toBeGreaterThan(0);
+  });
+
+  test('transcribeAudioFile splits audio into multiple requests when supported', async () => {
+    const decodeMock = jest.fn().mockResolvedValue({
+      pcm: new Float32Array(16000 * 4),
+      sampleRate: 16000,
+      durationMs: 4000,
+    });
+    const detectMock = jest.fn().mockReturnValue([
+      { startMs: 0, endMs: 1500 },
+      { startMs: 1600, endMs: 3500 },
+    ]);
+    const encodeMock = jest.fn().mockReturnValue(new Uint8Array([0, 1, 2]));
+    const transcribeMock = jest
+      .fn()
+      .mockResolvedValueOnce('first chunk')
+      .mockResolvedValueOnce('second chunk');
+
+    const originalAudio = window.AudioContext;
+    const originalOffline = window.OfflineAudioContext;
+    window.AudioContext = function MockContext() {};
+    window.OfflineAudioContext = function MockOffline() {};
+
+    jest.resetModules();
+    jest.doMock('./stt/audio.js', () => ({ decodeFileToMonoPcm: decodeMock }));
+    jest.doMock('./stt/vad.js', () => ({ detectSpeechSegments: detectMock }));
+    jest.doMock('./stt/chunkPlanner.js', () => ({
+      planSpeechChunks: jest.fn().mockReturnValue([
+        { index: 0, startMs: 0, endMs: 1500, segments: [] },
+        { index: 1, startMs: 1500, endMs: 3500, segments: [] },
+      ]),
+      slicePcm: jest.fn().mockReturnValue(new Float32Array([0, 0.1])),
+      normalizeSpeechSegments: jest
+        .fn()
+        .mockImplementation(({ segments }) => segments),
+    }));
+    jest.doMock('./stt/wav.js', () => ({ encodeWav: encodeMock }));
+    jest.doMock('./openai.js', () => ({ transcribeFile: transcribeMock }));
+
+    const mod = await import('./transcription.js');
+    const file = new File(['dummy'], 'audio.wav', { type: 'audio/wav' });
+    const result = await mod.transcribeAudioFile({ file, language: 'en' });
+
+    expect(transcribeMock).toHaveBeenCalledTimes(2);
+    expect(result).toContain('second chunk');
+
+    window.AudioContext = originalAudio;
+    window.OfflineAudioContext = originalOffline;
+    jest.dontMock('./stt/audio.js');
+    jest.dontMock('./stt/vad.js');
+    jest.dontMock('./stt/chunkPlanner.js');
+    jest.dontMock('./stt/wav.js');
+    jest.dontMock('./openai.js');
+    jest.resetModules();
   });
 });
