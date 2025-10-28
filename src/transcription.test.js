@@ -4,10 +4,10 @@ import {
   createSpeechRecognitionController,
   transcribeAudioFile,
 } from './transcription.js';
-import { transcribeFile } from './openai.js';
+import { chunkedTranscription } from './stt/transcriber.js';
 
-jest.mock('./openai.js', () => ({
-  transcribeFile: jest.fn(),
+jest.mock('./stt/transcriber.js', () => ({
+  chunkedTranscription: jest.fn(),
 }));
 
 describe('transcription utilities', () => {
@@ -223,11 +223,14 @@ describe('transcription utilities', () => {
     controller.stop();
   });
 
-  test('transcribeAudioFile proxies to openai module', async () => {
+  test('transcribeAudioFile delegates to chunked transcriber', async () => {
     const file = new File(['data'], 'audio.mp3', { type: 'audio/mpeg' });
-    transcribeFile.mockResolvedValue('transcribed');
+    chunkedTranscription.mockResolvedValue('transcribed');
     const result = await transcribeAudioFile({ file, language: 'en' });
-    expect(transcribeFile).toHaveBeenCalledWith({ file, language: 'en' });
+    expect(chunkedTranscription).toHaveBeenCalledWith({
+      file,
+      language: 'en',
+    });
     expect(result).toBe('transcribed');
   });
 });

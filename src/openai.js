@@ -152,7 +152,7 @@ export async function summarizeText({ lowQuality = '', highQuality = '' }) {
   return response.choices?.[0]?.message?.content || '';
 }
 
-export async function transcribeFile({ file, language }) {
+export async function transcribeFile({ file, language, prompt }) {
   if (!file) throw new Error('File is required for transcription');
   const model = resolveTranscriptionModel();
 
@@ -161,6 +161,7 @@ export async function transcribeFile({ file, language }) {
       file,
       model,
       language,
+      prompt,
     });
     return response.text;
   } catch (error) {
