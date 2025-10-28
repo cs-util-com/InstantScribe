@@ -84,15 +84,15 @@ The current application lives entirely in `index.html`. A developer reimplementi
 
 ### 7. OpenAI-Powered Features
 
-- High-quality transcription (Whisper):
+- High-quality transcription (OpenAI 4o Transcribe):
   - Requires a non-empty `apiKey`; otherwise, show a toast and expand the API key panel.
   - Works on the most recent audio source: dropped file takes priority, then native `audioChunks`, then `mp3Data` fallback.
-  - Uses `client.audio.transcriptions.create({ file, model: 'whisper-1', language })` where the language is the dropdown’s two-letter prefix.
+  - Uses `client.audio.transcriptions.create({ file, model: 'gpt-4o-transcribe', language })` by default (override with `TRANSCRIBE_MODEL` if needed) where the language is the dropdown’s two-letter prefix.
   - Displays progress text while awaiting the result, then populates `#high-quality-transcription`, reveals its container, resets `droppedFile`, updates AI-download visibility, and emits a success toast.
 - Summarization:
   - Hidden until either the low-quality transcription or the high-quality transcription contains non-whitespace text.
   - On click, ensure at least one text source exists and an API key is available.
-  - Call `client.chat.completions.create` with model `gpt-4o-mini`, passing a prompt that instructs the assistant to produce bullet takeaways, a structured paragraph summary, and a full high-quality transcript (prioritizing the Whisper text when present).
+  - Call `client.chat.completions.create` with model `gpt-4o-mini`, passing a prompt that instructs the assistant to produce bullet takeaways, a structured paragraph summary, and a full high-quality transcript (prioritizing the Whisper text when present) while explicitly requiring the summary to stay in the same language as the input text via the system message.
   - Write “Generating summary…” while awaiting the response, then inject the result, reveal summary UI, and update download visibility. On failure, surface the error message in the summary area.
 - Download AI Texts button becomes visible when either high-quality transcription or summary content is populated. Downloads individual `.txt` files for each available artifact using the same timestamp/title naming scheme and confirms via toast.
 
