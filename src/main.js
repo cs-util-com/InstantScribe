@@ -523,6 +523,7 @@ async function generateHighQualityTranscription() {
   } catch (error) {
     console.error('Error generating high-quality transcription:', error);
     highQualityTranscriptionEl.textContent = `Error: ${error.message}`;
+    showNotification('High-quality transcription failed. Please try again.');
     droppedFile = null;
   }
 }
