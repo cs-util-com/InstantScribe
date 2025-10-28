@@ -152,16 +152,21 @@ export async function summarizeText({ lowQuality = '', highQuality = '' }) {
   return response.choices?.[0]?.message?.content || '';
 }
 
-export async function transcribeFile({ file, language }) {
+export async function transcribeFile({ file, language, prompt }) {
   if (!file) throw new Error('File is required for transcription');
   const model = resolveTranscriptionModel();
 
   try {
-    const response = await ensureClient().audio.transcriptions.create({
+    const payload = {
       file,
       model,
       language,
-    });
+    };
+    if (typeof prompt === 'string' && prompt.trim().length > 0) {
+      payload.prompt = prompt;
+    }
+
+    const response = await ensureClient().audio.transcriptions.create(payload);
     return response.text;
   } catch (error) {
     const context = {

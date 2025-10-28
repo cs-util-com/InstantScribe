@@ -1,4 +1,8 @@
 import { transcribeFile } from './openai.js';
+import {
+  supportsChunkedTranscription,
+  transcribeWithVad,
+} from './stt/chunked-transcriber.js';
 
 const LANGUAGE_STORAGE_KEY = 'transcription_language';
 
@@ -132,5 +136,16 @@ export function createSpeechRecognitionController({
 }
 
 export async function transcribeAudioFile({ file, language }) {
-  return transcribeFile({ file, language });
+  if (!file) throw new Error('File is required for transcription');
+
+  if (!supportsChunkedTranscription()) {
+    return transcribeFile({ file, language });
+  }
+
+  try {
+    return await transcribeWithVad({ file, language });
+  } catch (error) {
+    console.warn('Chunked transcription failed, falling back', error);
+    return transcribeFile({ file, language });
+  }
 }

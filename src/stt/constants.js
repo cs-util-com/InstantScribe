@@ -1,0 +1,11 @@
+export const STT_SAMPLE_RATE = 16000;
+export const STT_MAX_CHUNK_SEC = 1200;
+export const STT_UPLOAD_CONCURRENCY = 3;
+export const STT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
+export const STT_DEFAULT_PAD_MS = 200;
+export const STT_DEFAULT_OVERLAP_MS = 500;
+export const STT_VAD_THRESHOLD = 0.5;
+export const STT_VAD_MIN_SPEECH_MS = 250;
+export const STT_VAD_MIN_SILENCE_MS = 100;
+export const STT_VAD_MAX_SEGMENT_SEC = 15 * 60;
+export const STT_PROMPT_TAIL_CHARS = 200;

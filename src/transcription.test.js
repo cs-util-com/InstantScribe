@@ -5,9 +5,18 @@ import {
   transcribeAudioFile,
 } from './transcription.js';
 import { transcribeFile } from './openai.js';
+import {
+  supportsChunkedTranscription,
+  transcribeWithVad,
+} from './stt/chunked-transcriber.js';
 
 jest.mock('./openai.js', () => ({
   transcribeFile: jest.fn(),
+}));
+
+jest.mock('./stt/chunked-transcriber.js', () => ({
+  supportsChunkedTranscription: jest.fn(() => false),
+  transcribeWithVad: jest.fn(),
 }));
 
 describe('transcription utilities', () => {
@@ -223,11 +232,43 @@ describe('transcription utilities', () => {
     controller.stop();
   });
 
-  test('transcribeAudioFile proxies to openai module', async () => {
+  test('transcribeAudioFile falls back to OpenAI module when chunking unsupported', async () => {
     const file = new File(['data'], 'audio.mp3', { type: 'audio/mpeg' });
+    supportsChunkedTranscription.mockReturnValue(false);
     transcribeFile.mockResolvedValue('transcribed');
+
     const result = await transcribeAudioFile({ file, language: 'en' });
+
+    expect(supportsChunkedTranscription).toHaveBeenCalled();
+    expect(transcribeWithVad).not.toHaveBeenCalled();
     expect(transcribeFile).toHaveBeenCalledWith({ file, language: 'en' });
     expect(result).toBe('transcribed');
+  });
+
+  test('transcribeAudioFile uses VAD chunking when supported', async () => {
+    const file = new File(['data'], 'audio.mp3', { type: 'audio/mpeg' });
+    supportsChunkedTranscription.mockReturnValue(true);
+    transcribeWithVad.mockResolvedValue('chunked transcript');
+
+    const result = await transcribeAudioFile({ file, language: 'en' });
+
+    expect(transcribeWithVad).toHaveBeenCalledWith({ file, language: 'en' });
+    expect(result).toBe('chunked transcript');
+  });
+
+  test('transcribeAudioFile falls back when VAD chunking fails', async () => {
+    const file = new File(['data'], 'audio.mp3', { type: 'audio/mpeg' });
+    supportsChunkedTranscription.mockReturnValue(true);
+    transcribeWithVad.mockRejectedValue(new Error('vad failed'));
+    transcribeFile.mockResolvedValue('fallback transcript');
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const result = await transcribeAudioFile({ file, language: 'en' });
+
+    expect(transcribeWithVad).toHaveBeenCalledWith({ file, language: 'en' });
+    expect(transcribeFile).toHaveBeenCalledWith({ file, language: 'en' });
+    expect(result).toBe('fallback transcript');
+
+    warn.mockRestore();
   });
 });

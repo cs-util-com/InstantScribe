@@ -56,6 +56,22 @@ describe('openai helpers', () => {
     });
   });
 
+  test('transcribeFile forwards prompt when provided', async () => {
+    const mockClient = createMockClient();
+    mockClient.audio.transcriptions.create.mockResolvedValue({ text: 'ok' });
+    __setClientForTesting(mockClient);
+
+    const file = { name: 'chunk.wav' };
+    await transcribeFile({ file, language: 'en', prompt: 'context' });
+
+    expect(mockClient.audio.transcriptions.create).toHaveBeenCalledWith({
+      file,
+      model: 'gpt-4o-transcribe',
+      language: 'en',
+      prompt: 'context',
+    });
+  });
+
   test('transcribeFile honors TRANSCRIBE_MODEL override', async () => {
     process.env.TRANSCRIBE_MODEL = 'custom-model';
     const mockClient = createMockClient();
