@@ -34,9 +34,9 @@ fi
 
 # Copy dist files into repo ./ort/
 DEST_DIR="$ROOT_DIR/ort"
+# Remove old files and recreate directory
+rm -rf "$DEST_DIR"
 mkdir -p "$DEST_DIR"
-# Remove old files
-rm -rf "$DEST_DIR"/* || true
 cp -r package/dist/* "$DEST_DIR/"
 
 echo "Copied $(ls -1 "$DEST_DIR" | wc -l) files to $DEST_DIR"
