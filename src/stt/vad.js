@@ -46,8 +46,8 @@ async function ensureSession() {
   if (!sessionPromise) {
     try {
       const ort = await ensureOrt();
-      if (!ort.InferenceSession) {
-        throw new Error('InferenceSession not available in ONNX Runtime Web module');
+      if (!ort.InferenceSession || typeof ort.InferenceSession.create !== 'function') {
+        throw new Error('InferenceSession.create not available in ONNX Runtime Web module');
       }
       sessionPromise = ort.InferenceSession.create(DEFAULT_SILERO_MODEL_URL);
     } catch (error) {
