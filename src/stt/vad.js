@@ -70,7 +70,6 @@ function ensureOrt() {
   return ortPromise;
 }
 
-/* istanbul ignore next -- runtime depends on onnxruntime-web in browser */
 async function ensureSession() {
   if (!sessionPromise) {
     try {
@@ -83,8 +82,10 @@ async function ensureSession() {
           'InferenceSession.create not available in ONNX Runtime Web module'
         );
       }
+      console.log('VAD: Creating session with URL:', DEFAULT_SILERO_MODEL_URL);
       sessionPromise = ort.InferenceSession.create(DEFAULT_SILERO_MODEL_URL);
     } catch (error) {
+      console.warn('VAD: Session creation failed with error:', error);
       console.warn(
         'Failed to create ONNX InferenceSession, VAD will not be available',
         error
@@ -236,8 +237,6 @@ export async function detectSpeechSegments(pcm) {
 
   const probabilities = [];
   const windowSamples = STT_CONFIG.windowSamples;
-  let hTensor = createHiddenTensor(ort);
-  let cTensor = createHiddenTensor(ort);
   let stateTensor = createStateTensor(ort);
   const srTensor = createSrTensor(ort);
 
@@ -248,10 +247,8 @@ export async function detectSpeechSegments(pcm) {
 
     const feeds = {
       input: inputTensor,
-      h: hTensor,
-      c: cTensor,
-      sr: srTensor,
       state: stateTensor,
+      sr: srTensor,
     };
 
     console.log('VAD: Running inference for chunk at offset', offset);
@@ -271,9 +268,7 @@ export async function detectSpeechSegments(pcm) {
     const probability = extractSpeechProbability(results);
     probabilities.push(typeof probability === 'number' ? probability : 0);
 
-    hTensor = results.h || hTensor;
-    cTensor = results.c || cTensor;
-    stateTensor = results.state || stateTensor;
+    stateTensor = results.state_out || stateTensor;
   }
 
   console.log('VAD: Inference loop completed');

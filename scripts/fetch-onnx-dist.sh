@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: ./scripts/fetch-onnx-dist.sh [version]
 # Example: ./scripts/fetch-onnx-dist.sh 1.18.0
 
-VERSION=${1:-1.18.0}
+VERSION=${1:-1.19.0}
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 TMPDIR=$(mktemp -d)
 
