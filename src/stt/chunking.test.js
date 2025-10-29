@@ -26,15 +26,17 @@ describe('chunk planning utilities', () => {
     });
   });
 
-  test('buildFallbackChunks respects size limits', () => {
-    const originalBytes = STT_CONFIG.maxChunkBytes;
-    STT_CONFIG.maxChunkBytes = 32_000; // ~1s of 16k PCM
-    const fallback = buildFallbackChunks(120_000);
-    expect(fallback.length).toBeGreaterThan(1);
-    fallback.forEach((chunk) => {
-      expect(chunk.renderEndMs).toBeGreaterThan(chunk.renderStartMs);
-    });
-    STT_CONFIG.maxChunkBytes = originalBytes;
+  test('buildFallbackChunks total rendered duration is reasonable', () => {
+    const durationMs = 10 * 60 * 1000; // 10 minutes
+    const chunks = buildFallbackChunks(durationMs);
+    const totalRendered = chunks.reduce(
+      (sum, chunk) => sum + (chunk.renderEndMs - chunk.renderStartMs),
+      0
+    );
+    // For fallback chunks with overlap, total should be close to input duration
+    // Allow up to 10% extra for overlaps
+    expect(totalRendered).toBeLessThanOrEqual(durationMs * 1.1);
+    expect(totalRendered).toBeGreaterThanOrEqual(durationMs);
   });
 
   test('planChunks respects size thresholds during packing', () => {
