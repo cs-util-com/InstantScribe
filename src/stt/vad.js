@@ -97,7 +97,7 @@ async function ensureSession() {
 }
 
 function createStateTensor(ort) {
-  return new ort.Tensor('float32', new Float32Array(128), [1, 1, 128]);
+  return new ort.Tensor('float32', new Float32Array(256), [2, 1, 128]);
 }
 
 function createHiddenTensor(ort) {
