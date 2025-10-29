@@ -47,6 +47,12 @@ function ensureOrt() {
                 : 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
           }
 
+          // diagnostic: report which URL produced a usable ort
+          try {
+            console.info('Loaded ONNX Runtime Web from', url);
+          } catch {
+            /* ignore */
+          }
           return ort;
         } catch (err) {
           // try next candidate
