@@ -286,6 +286,15 @@ export function __resetVadForTesting() {
   sessionPromise = null;
 }
 
+/* istanbul ignore next -- test helper to inject fake ort/session in Node tests */
+export function __injectOrtForTesting(fakeOrt, fakeSession) {
+  ortPromise = Promise.resolve(fakeOrt);
+  // If fakeSession is omitted, leave sessionPromise null so ensureSession
+  // still runs its creation logic (useful for testing failure branches).
+  sessionPromise =
+    typeof fakeSession === 'undefined' ? null : Promise.resolve(fakeSession);
+}
+
 export const __internal = {
   appendSegment,
   mergeSegments,
