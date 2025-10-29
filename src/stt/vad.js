@@ -47,6 +47,9 @@ function ensureOrt() {
           // diagnostic: report which URL produced a usable ort
           try {
             console.info('Loaded ONNX Runtime Web from', url);
+            console.log('ORT object keys:', Object.keys(ort));
+            console.log('InferenceSession:', ort.InferenceSession);
+            console.log('create function:', typeof ort.InferenceSession?.create);
           } catch {
             /* ignore */
           }
