@@ -11,17 +11,18 @@ let sessionPromise = null;
 /* istanbul ignore next -- runtime depends on onnxruntime-web in browser */
 function ensureOrt() {
   if (!ortPromise) {
-    ortPromise = import(
-      'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.bundle.min.mjs'
-    )
-      .then((ort) => {
+    ortPromise = import('https://esm.sh/onnxruntime-web@1.18.0?target=es2020')
+      .then((module) => {
+        const ort = module.default || module;
+
         if (ort?.env?.wasm) {
-          // Disable multi-threading to avoid cross-origin isolation requirement
+          // avoid COOP/COEP
           ort.env.wasm.numThreads = 1;
-          // Set WASM paths to CDN
+
+          // point WASM assets to a CDN (unscoped package!)
           ort.env.wasm.wasmPaths =
             'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
-          // Only set custom WASM paths if explicitly configured and not the default '/ort/'
+
           if (DEFAULT_ORT_WASM_PATH && DEFAULT_ORT_WASM_PATH !== '/ort/') {
             ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
           }
