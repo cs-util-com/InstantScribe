@@ -41,10 +41,7 @@ function ensureOrt() {
           // configure WASM loader (single-threaded to avoid COOP/COEP)
           if (ort?.env?.wasm) {
             ort.env.wasm.numThreads = 1;
-            ort.env.wasm.wasmPaths =
-              DEFAULT_ORT_WASM_PATH && DEFAULT_ORT_WASM_PATH !== '/ort/'
-                ? DEFAULT_ORT_WASM_PATH
-                : 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
+            ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
           }
 
           // diagnostic: report which URL produced a usable ort
