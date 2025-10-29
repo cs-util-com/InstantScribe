@@ -17,7 +17,7 @@ export const STT_CONFIG = {
 export const DEFAULT_SILERO_MODEL_URL =
   typeof window !== 'undefined' && window.SILERO_VAD_MODEL
     ? window.SILERO_VAD_MODEL
-    : 'https://github.com/snakers4/silero-models/raw/master/models/silero_vad/en/silero_vad.onnx';
+    : 'https://github.com/snakers4/silero-vad/raw/refs/heads/master/src/silero_vad/data/silero_vad.onnx';
 
 export const DEFAULT_ORT_WASM_PATH =
   typeof window !== 'undefined' && window.ORT_WASM_PATH

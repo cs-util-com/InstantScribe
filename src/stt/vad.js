@@ -211,15 +211,19 @@ function extractSpeechProbability(results) {
   return 0;
 }
 
-/* istanbul ignore next -- requires onnx runtime in browser */
 export async function detectSpeechSegments(pcm) {
   if (!pcm || pcm.length === 0) return [];
   if (typeof window === 'undefined') {
     throw new Error('VAD requires browser environment');
   }
 
+  console.log('VAD: Starting ORT setup');
   const ort = await ensureOrt();
+  console.log('VAD: ORT loaded successfully');
+
+  console.log('VAD: Creating session');
   const session = await ensureSession();
+  console.log('VAD: Session created successfully');
 
   if (!session || typeof session.run !== 'function') {
     throw new Error(
@@ -234,6 +238,7 @@ export async function detectSpeechSegments(pcm) {
   let stateTensor = createStateTensor(ort);
   const srTensor = createSrTensor(ort);
 
+  console.log('VAD: Starting inference loop');
   for (let offset = 0; offset < pcm.length; offset += windowSamples) {
     const chunk = pcm.subarray(offset, offset + windowSamples);
     const inputTensor = createInputTensor(ort, chunk, windowSamples);
@@ -246,10 +251,13 @@ export async function detectSpeechSegments(pcm) {
       state: stateTensor,
     };
 
+    console.log('VAD: Running inference for chunk at offset', offset);
     let results;
     try {
       results = await session.run(feeds);
+      console.log('VAD: Inference successful, results keys:', Object.keys(results));
     } catch (error) {
+      console.warn('VAD: Inference failed with error:', error);
       console.warn(
         'Silero VAD inference failed, falling back to naive chunking',
         error
@@ -265,6 +273,7 @@ export async function detectSpeechSegments(pcm) {
     stateTensor = results.state || stateTensor;
   }
 
+  console.log('VAD: Inference loop completed');
   return postProcessProbabilities(probabilities, pcm.length);
 }
 
