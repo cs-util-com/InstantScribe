@@ -16,9 +16,9 @@ function ensureOrt() {
     // esm.sh first (fast), then fall back to known CDN ESM builds.
     ortPromise = (async () => {
       const candidates = [
-        'https://esm.sh/onnxruntime-web@1.18.0',
-        'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.esm.js',
-        'https://unpkg.com/onnxruntime-web@1.18.0/dist/ort.esm.js',
+        'https://esm.sh/onnxruntime-web@1.19.0',
+        'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.esm.js',
+        'https://unpkg.com/onnxruntime-web@1.19.0/dist/ort.esm.js',
       ];
 
       let lastError = null;
