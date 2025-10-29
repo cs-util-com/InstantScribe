@@ -49,7 +49,10 @@ function ensureOrt() {
             console.info('Loaded ONNX Runtime Web from', url);
             console.log('ORT object keys:', Object.keys(ort));
             console.log('InferenceSession:', ort.InferenceSession);
-            console.log('create function:', typeof ort.InferenceSession?.create);
+            console.log(
+              'create function:',
+              typeof ort.InferenceSession?.create
+            );
           } catch {
             /* ignore */
           }
@@ -258,7 +261,10 @@ export async function detectSpeechSegments(pcm) {
     try {
       results = await session.run(feeds);
       if (offset % (windowSamples * 4000) === 0) {
-        console.log('VAD: Inference successful, results keys:', Object.keys(results));
+        console.log(
+          'VAD: Inference successful, results keys:',
+          Object.keys(results)
+        );
       }
     } catch (error) {
       console.warn('VAD: Inference failed with error:', error);
