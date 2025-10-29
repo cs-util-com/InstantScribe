@@ -11,8 +11,11 @@ let sessionPromise = null;
 /* istanbul ignore next -- runtime depends on onnxruntime-web in browser */
 function ensureOrt() {
   if (!ortPromise) {
-    ortPromise = import('https://esm.sh/onnxruntime-web@1.18.0?target=es2020')
+    ortPromise = import('https://esm.sh/onnxruntime-web@1.18.0')
       .then((ort) => {
+        if (!ort) {
+          throw new Error('ONNX Runtime Web module is empty or undefined');
+        }
         if (ort?.env?.wasm) {
           // avoid COOP/COEP
           ort.env.wasm.numThreads = 1;
@@ -43,6 +46,9 @@ async function ensureSession() {
   if (!sessionPromise) {
     try {
       const ort = await ensureOrt();
+      if (!ort.InferenceSession) {
+        throw new Error('InferenceSession not available in ONNX Runtime Web module');
+      }
       sessionPromise = ort.InferenceSession.create(DEFAULT_SILERO_MODEL_URL);
     } catch (error) {
       console.warn(
