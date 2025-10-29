@@ -152,6 +152,15 @@
       </div>
     </div>
 
+    <script>
+      // Local ORT and Silero VAD defaults for development.
+      // These can be overridden by setting the same window properties before this page loads.
+      window.ORT_WASM_PATH = window.ORT_WASM_PATH || '/ort/';
+      // If you host the silero model locally, place it at /models/silero_v5_16k.onnx
+      window.SILERO_VAD_MODEL =
+        window.SILERO_VAD_MODEL || '/models/silero_v5_16k.onnx';
+    </script>
+
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
