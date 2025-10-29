@@ -16,5 +16,5 @@ Usage
 app root. The code already defaults to `DEFAULT_ORT_WASM_PATH = '/ort/'` in
 `src/stt/config.js`.
 
-3. Optionally set `window.ORT_WASM_PATH = '/ort/'` and `window.SILERO_VAD_MODEL = '/ort/silero_vad.onnx'` in
-`index.html` to be explicit during development (you would need to download the Silero VAD v6 model to `/ort/silero_vad.onnx`).
+3. Optionally set `window.ORT_WASM_PATH = '/ort/'` and `window.SILERO_VAD_MODEL = '/model/silero_vad.onnx'` in
+`index.html` to be explicit during development (you would need to download the Silero VAD v6 model to `/model/silero_vad.onnx`).
