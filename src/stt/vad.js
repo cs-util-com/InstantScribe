@@ -103,10 +103,6 @@ function createStateTensor(ort) {
   return new ort.Tensor('float32', new Float32Array(256), [2, 1, 128]);
 }
 
-function createHiddenTensor(ort) {
-  return new ort.Tensor('float32', new Float32Array(2 * 1 * 64), [2, 1, 64]);
-}
-
 function createInputTensor(ort, chunk, windowSamples) {
   const buffer = new Float32Array(windowSamples);
   buffer.set(chunk);
