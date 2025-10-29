@@ -11,19 +11,31 @@ let sessionPromise = null;
 /* istanbul ignore next -- runtime depends on onnxruntime-web in browser */
 function ensureOrt() {
   if (!ortPromise) {
-    ortPromise = import(
-      'https://esm.sh/onnxruntime-web@1.18.0?target=es2020'
-    ).then((module) => {
-      const ort = module.default || module;
-      if (ort?.env?.wasm) {
-        if (typeof ort.env.wasm.wasmPaths === 'string') {
-          ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
-        } else {
-          ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
+    ortPromise = import('https://esm.sh/onnxruntime-web@1.18.0?target=es2020')
+      .then((module) => {
+        const ort = module.default || module;
+        if (ort?.env?.wasm) {
+          // Disable multi-threading to avoid cross-origin isolation requirement
+          ort.env.wasm.numThreads = 1;
+          // Only set custom WASM paths if explicitly configured and not the default '/ort/'
+          if (DEFAULT_ORT_WASM_PATH && DEFAULT_ORT_WASM_PATH !== '/ort/') {
+            if (typeof ort.env.wasm.wasmPaths === 'string') {
+              ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
+            } else {
+              ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
+            }
+          }
+          // If DEFAULT_ORT_WASM_PATH is '/ort/' or not set, let ONNX use its default CDN loading
         }
-      }
-      return ort;
-    });
+        return ort;
+      })
+      .catch((error) => {
+        console.warn(
+          'Failed to load ONNX Runtime Web, VAD will not be available',
+          error
+        );
+        throw new Error('ONNX Runtime Web not available');
+      });
   }
   return ortPromise;
 }
@@ -31,8 +43,16 @@ function ensureOrt() {
 /* istanbul ignore next -- runtime depends on onnxruntime-web in browser */
 async function ensureSession() {
   if (!sessionPromise) {
-    const ort = await ensureOrt();
-    sessionPromise = ort.InferenceSession.create(DEFAULT_SILERO_MODEL_URL);
+    try {
+      const ort = await ensureOrt();
+      sessionPromise = ort.InferenceSession.create(DEFAULT_SILERO_MODEL_URL);
+    } catch (error) {
+      console.warn(
+        'Failed to create ONNX InferenceSession, VAD will not be available',
+        error
+      );
+      throw new Error('ONNX InferenceSession not available');
+    }
   }
   return sessionPromise;
 }
