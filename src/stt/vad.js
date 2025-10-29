@@ -12,25 +12,19 @@ let sessionPromise = null;
 function ensureOrt() {
   if (!ortPromise) {
     ortPromise = import(
-      'https://esm.sh/@microsoft/onnxruntime-web@1.18.0?target=es2020'
+      'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.bundle.min.mjs'
     )
-      .then((module) => {
-        const ort = module.default || module;
+      .then((ort) => {
         if (ort?.env?.wasm) {
           // Disable multi-threading to avoid cross-origin isolation requirement
           ort.env.wasm.numThreads = 1;
           // Set WASM paths to CDN
           ort.env.wasm.wasmPaths =
-            'https://cdn.jsdelivr.net/npm/@microsoft/onnxruntime-web@1.18.0/dist/';
+            'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
           // Only set custom WASM paths if explicitly configured and not the default '/ort/'
           if (DEFAULT_ORT_WASM_PATH && DEFAULT_ORT_WASM_PATH !== '/ort/') {
-            if (typeof ort.env.wasm.wasmPaths === 'string') {
-              ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
-            } else {
-              ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
-            }
+            ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
           }
-          // If DEFAULT_ORT_WASM_PATH is '/ort/' or not set, use the CDN
         }
         return ort;
       })
