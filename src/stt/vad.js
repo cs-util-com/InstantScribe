@@ -12,9 +12,7 @@ let sessionPromise = null;
 function ensureOrt() {
   if (!ortPromise) {
     ortPromise = import('https://esm.sh/onnxruntime-web@1.18.0?target=es2020')
-      .then((module) => {
-        const ort = module.default || module;
-
+      .then((ort) => {
         if (ort?.env?.wasm) {
           // avoid COOP/COEP
           ort.env.wasm.numThreads = 1;
