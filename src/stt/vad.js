@@ -251,11 +251,15 @@ export async function detectSpeechSegments(pcm) {
       sr: srTensor,
     };
 
-    console.log('VAD: Running inference for chunk at offset', offset);
+    if (offset % (windowSamples * 4000) === 0) {
+      console.log('VAD: Running inference for chunk at offset', offset);
+    }
     let results;
     try {
       results = await session.run(feeds);
-      console.log('VAD: Inference successful, results keys:', Object.keys(results));
+      if (offset % (windowSamples * 4000) === 0) {
+        console.log('VAD: Inference successful, results keys:', Object.keys(results));
+      }
     } catch (error) {
       console.warn('VAD: Inference failed with error:', error);
       console.warn(
@@ -268,7 +272,7 @@ export async function detectSpeechSegments(pcm) {
     const probability = extractSpeechProbability(results);
     probabilities.push(typeof probability === 'number' ? probability : 0);
 
-    stateTensor = results.state_out || stateTensor;
+    stateTensor = results.stateN || stateTensor;
   }
 
   console.log('VAD: Inference loop completed');
