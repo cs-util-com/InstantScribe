@@ -44,4 +44,5 @@ echo "Copied $(ls -1 "$DEST_DIR" | wc -l) files to $DEST_DIR"
 # Cleanup
 rm -rf "$TMPDIR"
 
-echo "Done. To serve the ONNX WASM assets locally, ensure your static server serves the ./ort/ folder at '/ort/'.\nYou can also set window.ORT_WASM_PATH = '/ort/' before loading the app to be explicit."
+echo "Done. To serve the ONNX WASM assets locally, ensure your static server serves the ./ort/ folder at '/ort/'."
+echo "You can also set window.ORT_WASM_PATH = '/ort/' before loading the app to be explicit."
