@@ -261,7 +261,40 @@ export async function detectSpeechSegments(pcm) {
     const probability = extractSpeechProbability(results);
     probabilities.push(typeof probability === 'number' ? probability : 0);
 
-    stateTensor = results.stateN || stateTensor;
+    // Carry forward the RNN state from the model output.
+    // Different model exports may name the next-state tensor differently
+    // (for example: `stateN`, `state`, `state_out`, ...). Prefer common
+    // candidates, then fall back to any result key containing 'state'.
+    const STATE_KEYS = [
+      'stateN',
+      'state',
+      'state_out',
+      'stateOut',
+      'state_out_0',
+      'state_out.0',
+    ];
+
+    let nextState = null;
+    for (const k of STATE_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(results, k) && results[k]) {
+        nextState = results[k];
+        break;
+      }
+    }
+
+    if (!nextState) {
+      // As a last resort, pick the first result key whose name contains
+      // 'state' (case-insensitive). This keeps behavior resilient to
+      // unexpected naming in model exports.
+      for (const k of Object.keys(results)) {
+        if (/state/i.test(k) && results[k]) {
+          nextState = results[k];
+          break;
+        }
+      }
+    }
+
+    stateTensor = nextState || stateTensor;
   }
 
   console.log('VAD: Inference loop completed');
