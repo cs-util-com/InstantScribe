@@ -9,7 +9,7 @@ Usage
 1. Run the script (requires `npm` and `tar` available on the PATH):
 
 ```bash
-./scripts/fetch-onnx-dist.sh 1.18.0
+./scripts/fetch-onnx-dist.sh 1.19.0
 ```
 
 2. Serve the repository (or your static files) so `/ort/` is accessible from the
