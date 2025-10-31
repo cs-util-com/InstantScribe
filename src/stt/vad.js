@@ -49,7 +49,10 @@ function ensureOrt() {
 
         return ort;
       } catch (err) {
-        console.warn('Failed to load ONNX Runtime Web from local /ort path', err);
+        console.warn(
+          'Failed to load ONNX Runtime Web from local /ort path',
+          err
+        );
         throw new Error('ONNX Runtime Web not available');
       }
     })();
