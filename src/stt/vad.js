@@ -11,63 +11,47 @@ let sessionPromise = null;
 /* istanbul ignore next -- runtime depends on onnxruntime-web in browser */
 function ensureOrt() {
   if (!ortPromise) {
-    // Try multiple import sources. Some CDNs or esm transforms wrap the
-    // real export under `default` or produce incomplete modules. Try
-    // esm.sh first (fast), then fall back to known CDN ESM builds.
+    // Prefer the vendored local ESM build under /ort to avoid external
+    // CDN dependencies and cross-origin complications. Use a dynamic
+    // import so the module is only loaded at runtime (preserves tests
+    // and server-side evaluation safety).
     ortPromise = (async () => {
-      const candidates = [
-        'https://esm.sh/onnxruntime-web@1.19.0',
-        'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.esm.js',
-        'https://unpkg.com/onnxruntime-web@1.19.0/dist/ort.esm.js',
-      ];
+      try {
+        const localUrl = '/ort/ort.wasm.min.mjs';
+        const module = await import(localUrl);
+        const ort = module?.default || module;
+        if (!ort) throw new Error('empty module');
 
-      let lastError = null;
-      for (const url of candidates) {
-        try {
-          const module = await import(url);
-          const ort = module?.default || module;
-          if (!ort) throw new Error('empty module');
-
-          // basic sanity: must expose InferenceSession.create
-          if (
-            !ort.InferenceSession ||
-            typeof ort.InferenceSession.create !== 'function'
-          ) {
-            throw new Error(
-              'incomplete ort module (missing InferenceSession.create)'
-            );
-          }
-
-          // configure WASM loader (single-threaded to avoid COOP/COEP)
-          if (ort?.env?.wasm) {
-            ort.env.wasm.numThreads = 1;
-            ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
-          }
-
-          // diagnostic: report which URL produced a usable ort
-          try {
-            console.info('Loaded ONNX Runtime Web from', url);
-            console.log('ORT object keys:', Object.keys(ort));
-            console.log('InferenceSession:', ort.InferenceSession);
-            console.log(
-              'create function:',
-              typeof ort.InferenceSession?.create
-            );
-          } catch {
-            /* ignore */
-          }
-          return ort;
-        } catch (err) {
-          // try next candidate
-          lastError = err;
+        // basic sanity: must expose InferenceSession.create
+        if (
+          !ort.InferenceSession ||
+          typeof ort.InferenceSession.create !== 'function'
+        ) {
+          throw new Error(
+            'incomplete ort module (missing InferenceSession.create)'
+          );
         }
-      }
 
-      console.warn(
-        'Failed to load ONNX Runtime Web from CDN candidates',
-        lastError
-      );
-      throw new Error('ONNX Runtime Web not available');
+        // configure WASM loader (single-threaded to avoid COOP/COEP)
+        if (ort?.env?.wasm) {
+          ort.env.wasm.numThreads = 1;
+          ort.env.wasm.wasmPaths = DEFAULT_ORT_WASM_PATH;
+        }
+
+        try {
+          console.info('Loaded ONNX Runtime Web from', localUrl);
+          console.log('ORT object keys:', Object.keys(ort));
+          console.log('InferenceSession:', ort.InferenceSession);
+          console.log('create function:', typeof ort.InferenceSession?.create);
+        } catch {
+          /* ignore */
+        }
+
+        return ort;
+      } catch (err) {
+        console.warn('Failed to load ONNX Runtime Web from local /ort path', err);
+        throw new Error('ONNX Runtime Web not available');
+      }
     })();
   }
   return ortPromise;
