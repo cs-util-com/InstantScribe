@@ -121,6 +121,54 @@ describe('vad helpers', () => {
     expect(Array.isArray(segments)).toBe(true);
   });
 
+  test('detectSpeechSegments accepts `state` output key', async () => {
+    __resetVadForTesting();
+
+    const fakeOrt = {
+      Tensor: class FakeTensor {
+        constructor(type, data) {
+          this.data = data;
+        }
+      },
+    };
+
+    const fakeSession = {
+      run: jest.fn(async (feeds) => {
+        // model returns next-state under `state`
+        return { speech_prob: { data: [0.8] }, state: feeds.state };
+      }),
+    };
+
+    __injectOrtForTesting(fakeOrt, fakeSession);
+    const pcm = new Float32Array(STT_CONFIG.sampleRate);
+    const segments = await detectSpeechSegments(pcm);
+    expect(Array.isArray(segments)).toBe(true);
+  });
+
+  test('detectSpeechSegments accepts `state_out` output key', async () => {
+    __resetVadForTesting();
+
+    const fakeOrt = {
+      Tensor: class FakeTensor {
+        constructor(type, data) {
+          this.data = data;
+        }
+      },
+    };
+
+    const fakeSession = {
+      run: jest.fn(async (feeds) => {
+        // model returns next-state under `state_out`
+        return { speech_prob: { data: [0.7] }, state_out: feeds.state };
+      }),
+    };
+
+    __injectOrtForTesting(fakeOrt, fakeSession);
+    const pcm = new Float32Array(STT_CONFIG.sampleRate);
+    const segments = await detectSpeechSegments(pcm);
+    expect(Array.isArray(segments)).toBe(true);
+  });
+
   test('detectSpeechSegments surfaces session errors', async () => {
     __resetVadForTesting();
     const fakeOrt = { Tensor: class FakeTensor {} };
