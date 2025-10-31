@@ -203,4 +203,50 @@ describe('vad helpers', () => {
   test('mergeSegments returns empty array when given no segments', () => {
     expect(mergeSegments([])).toEqual([]);
   });
+
+  // NOTE: skipping a direct test for `typeof window === 'undefined'` because
+  // the test environment provides a persistent `window` (jsdom). Other
+  // runtime branches are covered below (session/run checks and fallback
+  // state key matching).
+
+  test('detectSpeechSegments throws when session has no run function', async () => {
+    __resetVadForTesting();
+    // Provide an ort with a proper InferenceSession.create that returns
+    // an object lacking a run function to trigger the runtime check.
+    const fakeOrt = {
+      Tensor: class FakeTensor {},
+      InferenceSession: { create: () => ({}) },
+    };
+    // Inject ort and a session object without `run`
+    __injectOrtForTesting(fakeOrt, {});
+
+    const pcm = new Float32Array(STT_CONFIG.sampleRate);
+    await expect(detectSpeechSegments(pcm)).rejects.toThrow(
+      /ONNX InferenceSession.run not available/
+    );
+  });
+
+  test('detectSpeechSegments uses fallback state key when STATE_KEYS missing', async () => {
+    __resetVadForTesting();
+    const fakeOrt = {
+      Tensor: class FakeTensor {
+        constructor(type, data) {
+          this.data = data;
+        }
+      },
+    };
+
+    const fakeSession = {
+      run: jest.fn(async () => {
+        // return a probability and a non-standard state key that still
+        // matches /state/i so the fallback branch is exercised
+        return { speech_prob: { data: [0.65] }, myStateValue: { data: [] } };
+      }),
+    };
+
+    __injectOrtForTesting(fakeOrt, fakeSession);
+    const pcm = new Float32Array(STT_CONFIG.sampleRate);
+    const segments = await detectSpeechSegments(pcm);
+    expect(Array.isArray(segments)).toBe(true);
+  });
 });
