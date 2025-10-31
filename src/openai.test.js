@@ -49,11 +49,14 @@ describe('openai helpers', () => {
     const result = await transcribeFile({ file, language: 'en' });
 
     expect(result).toBe('hello world');
-    expect(mockClient.audio.transcriptions.create).toHaveBeenCalledWith({
-      file,
-      model: 'gpt-4o-transcribe',
-      language: 'en',
-    });
+    expect(mockClient.audio.transcriptions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file,
+        model: 'gpt-4o-transcribe',
+        language: 'en',
+        prompt: undefined,
+      })
+    );
   });
 
   test('transcribeFile honors TRANSCRIBE_MODEL override', async () => {
@@ -65,11 +68,14 @@ describe('openai helpers', () => {
     const file = { name: 'audio.wav' };
     await transcribeFile({ file, language: 'de' });
 
-    expect(mockClient.audio.transcriptions.create).toHaveBeenCalledWith({
-      file,
-      model: 'custom-model',
-      language: 'de',
-    });
+    expect(mockClient.audio.transcriptions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file,
+        model: 'custom-model',
+        language: 'de',
+        prompt: undefined,
+      })
+    );
   });
 
   test('transcribeFile logs model and status information on failure', async () => {

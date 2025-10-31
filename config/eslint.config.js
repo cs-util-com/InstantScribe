@@ -12,6 +12,8 @@ module.exports = [
       '../reports/**',
       'reports/**',
       '../node_modules/**',
+      '../ort/**',
+      'ort/**',
       '../playwright-report/**',
       'playwright-report/**',
       '../test-results/**',

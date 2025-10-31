@@ -1,4 +1,4 @@
-import { transcribeFile } from './openai.js';
+import { chunkedTranscription } from './stt/transcriber.js';
 
 const LANGUAGE_STORAGE_KEY = 'transcription_language';
 
@@ -132,5 +132,5 @@ export function createSpeechRecognitionController({
 }
 
 export async function transcribeAudioFile({ file, language }) {
-  return transcribeFile({ file, language });
+  return chunkedTranscription({ file, language });
 }
